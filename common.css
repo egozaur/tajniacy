@@ -1,0 +1,24 @@
+/* Motywy wspólne dla index.html i captain.html (body[data-theme=...]) */
+:root{
+  --bg:#f4e6cf; --bg2:#ecd5ae; --ink:#3b2a1e; --on-ink:#fff6e3; --card:#fff6e3; --cardb:#d9bf92; --paper:#fff6e3; --paper2:#fffdf7;
+  --r:#c4472c; --rt:#f6d3c8; --rtx:#8c2713; --b:#2b6c8c; --bt:#cfe3ec; --btx:#164a63;
+  --n:#d8c29a; --nt:#f1e3c6; --ntx:#8a7650; --nrev:#6a5636; --a:#241b14; --at:#3a2e24; --accent:#f2c94c;
+  --hfont:'Nunito',system-ui,sans-serif;
+}
+body[data-theme=noir]{
+  --bg:#2a2a30; --bg2:#101013; --ink:#ece4d0; --on-ink:#16161a; --card:#2c2c33; --cardb:#52525e; --paper:#26262c; --paper2:#1c1c21;
+  --r:#d4483c; --rt:#47231f; --rtx:#ffb9ae; --b:#3d8cc0; --bt:#1c3547; --btx:#aedcf5;
+  --n:#6e6858; --nt:#37352e; --ntx:#bdb398; --nrev:#f3ecd8; --a:#000; --at:#000; --accent:#d4af37;
+  --hfont:'Special Elite','Courier New',monospace;
+}
+body[data-theme=retro]{
+  --bg:#2f1759; --bg2:#12082b; --ink:#f6e9ff; --on-ink:#1a0b36; --card:#3a2068; --cardb:#7a52c7; --paper:#33195e; --paper2:#2a1450;
+  --r:#ff3d7f; --rt:#5b1a45; --rtx:#ffb3d1; --b:#12b5e5; --bt:#173d70; --btx:#a4e6ff;
+  --n:#7a6fa6; --nt:#3c2c63; --ntx:#c9bfe6; --nrev:#fff; --a:#000; --at:#000; --accent:#ffe14d;
+  --hfont:'Bungee','Nunito',system-ui,sans-serif;
+}
+body[data-theme=light]{
+  --bg:#f6f7f9; --bg2:#e4e8ee; --ink:#1d2430; --on-ink:#ffffff; --card:#ffffff; --cardb:#cdd5df; --paper:#ffffff; --paper2:#fafbfc;
+  --r:#d62839; --rt:#fbdadd; --rtx:#8a1520; --b:#1c6ea4; --bt:#d6e9f6; --btx:#0e4468;
+  --n:#c5cbd4; --nt:#eceff3; --ntx:#5b6575; --nrev:#39414f; --a:#1a1d24; --at:#3c414c; --accent:#ffc83d;
+}
