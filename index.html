@@ -2,8 +2,10 @@
 <html lang="pl">
 <head>
 <meta charset="utf-8">
+<script src="/auth.js"></script>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Tajniacy</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <meta name="robots" content="noindex">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;800;900&family=Special+Elite&family=Bungee&display=swap" rel="stylesheet">
@@ -2322,6 +2324,13 @@ select{font-family:inherit;font-size:1rem;border:2px solid var(--cardb);border-r
 /* buttons */
 .btn{border:0;border-radius:14px;padding:.7em 1.2em;font-weight:800;font-size:1rem;background:var(--paper);box-shadow:0 2px 0 var(--cardb);border:2px solid var(--cardb)}
 .btn:active{transform:translateY(1px)}
+.splash .tolobby{position:absolute;top:18px;left:18px;z-index:2}
+.saves{display:flex;flex-direction:column;gap:8px;margin:12px 0;text-align:left}
+.save{display:flex;align-items:center;gap:8px;background:var(--paper2);border:2px solid var(--cardb);border-radius:12px;padding:8px 10px}
+.save.cur{border-color:var(--ink)}
+.save .si{flex:1;min-width:0}
+.save .si b{display:block;font-weight:900;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.save .si small{display:block;font-weight:700;font-size:.8rem;opacity:.75}
 .btn.pri{background:var(--ink);color:var(--on-ink);border-color:var(--ink);box-shadow:none}
 .btn.r{background:var(--r);color:#fff;border-color:var(--r)}
 .btn.b{background:var(--b);color:#fff;border-color:var(--b)}
@@ -2590,7 +2599,8 @@ textarea{width:100%;min-height:260px;font-family:ui-monospace,Menlo,monospace;fo
 <div class="snd"><button id="bmusic" data-act="tmusic" title="Muzyka">🎵</button><button id="bsfx" data-act="tsfx" title="Efekty dźwiękowe">🔊</button></div>
 <script>
 /* ---------- stałe i dane domyślne ---------- */
-const BASE_URL = "https://egozaur.github.io/tajniacy/captain.html";
+const BASE_URL = "https://pl3y.pl/tajniacy/captain.html";
+const LOBBY_BTN = '<button class="btn sm tolobby" data-act="lobby">← Lobby</button>';
 const TEAMS = { r:{name:"Czerwoni"}, b:{name:"Niebiescy"} };
 const GLYPH = { r:"▲", b:"◆", n:"●", a:"☠" };
 const PRESETS=[['Czerwoni','Niebiescy'],['Policja','Mafia'],['Szpiedzy','Kontrwywiad'],['Lisy','Wilki'],['Smoki','Rycerze'],['Piraci','Marynarka']];
@@ -2831,6 +2841,84 @@ async function endTurn(){
   Snd.play('turn'); turnBanner(game.turn);
   await store.set('game',game);
 }
+/* ---------- zapisane gry ----------
+   Lista w localStorage „tajniacy_saves”: [{id, name, ts, game, cfg}], najnowsze pierwsze.
+   Gra zapisana (game.saveId) aktualizuje swój zapis sama przy każdym ruchu – patrz syncSave(). */
+const SAVES_KEY='tajniacy_saves', SAVES_MAX=30;
+const SAVE_CFG=['players','names','theme','match','score','assassins'];
+function loadSaves(){ try{ const a=JSON.parse(localStorage.getItem(SAVES_KEY)||'[]'); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
+function writeSaves(a){
+  try{ localStorage.setItem(SAVES_KEY,JSON.stringify(a.slice(0,SAVES_MAX))); return true; }
+  catch(e){ toast("Nie udało się zapisać – brak miejsca w przeglądarce"); return false; }
+}
+function saveCfg(){ const c={}; SAVE_CFG.forEach(k=>c[k]=JSON.parse(JSON.stringify(config[k]??null))); return c; }
+function saveGame(name){
+  if(!game) return;
+  const a=loadSaves(), old=a.find(s=>s.id===game.saveId);
+  const id=old?old.id:Date.now();
+  game={...game,saveId:id,saveName:name};
+  const entry={id,name,ts:Date.now(),game:JSON.parse(JSON.stringify(game)),cfg:saveCfg()};
+  if(!writeSaves([entry,...a.filter(s=>s.id!==id)])) return;
+  store.set('game',game); render();
+  toast(`Zapisano „${name}” – kolejne ruchy zapiszą się same`);
+}
+function syncSave(){
+  if(!game||!game.saveId) return;
+  const a=loadSaves(), s=a.find(x=>x.id===game.saveId); if(!s) return;
+  const g=JSON.stringify(game), c=saveCfg();
+  if(JSON.stringify(s.game)===g && JSON.stringify(s.cfg)===JSON.stringify(c)) return;
+  s.game=JSON.parse(g); s.cfg=c; s.ts=Date.now();
+  writeSaves([s,...a.filter(x=>x!==s)]);
+}
+const unsavedGame = () => !!(game && !game.winner && !game.saveId);
+function saveStatus(s){
+  const g=s.game, nm=t=>(s.cfg&&s.cfg.names&&s.cfg.names[t])||TEAMS[t].name;
+  const lf=t=>g.key.filter((x,j)=>x===t&&!g.revealed[j]).length;
+  const d=new Date(s.ts).toLocaleString('pl-PL',{day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'});
+  const st=g.winner?`wygrali ${nm(g.winner)}`:`ruch: ${nm(g.turn)} · zostało ${lf('r')} : ${lf('b')}`;
+  return `${d} · ${nm('r')} vs ${nm('b')} · ${st}`;
+}
+function savesDialog(){
+  const o=document.createElement('div'); o.className='ov';
+  const draw=()=>{
+    const a=loadSaves();
+    o.innerHTML=`<div class="dlg wide"><h2>Zapisane gry</h2>${a.length
+      ?`<div class="saves">${a.map(s=>`<div class="save ${game&&game.saveId===s.id?'cur':''}"><div class="si"><b>${esc(s.name)}</b><small>${esc(saveStatus(s))}</small></div>
+          <button class="btn sm pri" data-sv="load" data-id="${s.id}">Wczytaj</button><button class="btn sm" data-sv="del" data-id="${s.id}" title="Usuń zapis" aria-label="Usuń zapis ${esc(s.name)}">✕</button></div>`).join('')}</div>`
+      :'<p class="note">Nie masz jeszcze zapisanych gier. Zapiszesz grę przyciskiem „Zapisz grę” pod planszą.</p>'}
+      <div class="row"><button class="btn" data-sv="close">Zamknij</button></div></div>`;
+  };
+  o.addEventListener('click',async e=>{
+    if(e.target===o){ o.remove(); return; }
+    const b=e.target.closest('[data-sv]'); if(!b) return;
+    if(b.dataset.sv==='close'){ o.remove(); return; }
+    const s=loadSaves().find(x=>x.id===+b.dataset.id); if(!s) return draw();
+    if(b.dataset.sv==='del'){
+      if(await ask(`Usunąć zapis „${s.name}”?`,"Tak, usuń")){ writeSaves(loadSaves().filter(x=>x.id!==s.id)); draw(); }
+    } else if(b.dataset.sv==='load'){
+      if(unsavedGame() && !(await ask(`Wczytać „${s.name}”?`,"Tak, wczytaj","Obecna gra nie jest zapisana i zostanie zastąpiona."))) return;
+      o.remove();
+      config={...config,...s.cfg}; game={...s.game,saveId:s.id,saveName:s.name};
+      ui.splash=false; ui.screen='board'; ui.qr=!game.winner; ui.winHold=false; ui.hideWin=null; Snd.hush(false);
+      render(); saveConfig(); store.set('game',game);
+      toast(`Wczytano „${s.name}” – kapitanowie muszą zeskanować nowe kody QR`);
+    }
+  });
+  o.addEventListener('keydown',e=>{ if(e.key==='Escape') o.remove(); });
+  document.body.appendChild(o); draw();
+}
+function askText(title, okText, value){
+  return new Promise(res=>{
+    const o=document.createElement('div'); o.className='ov';
+    o.innerHTML=`<form class="dlg"><h2>${esc(title)}</h2><p><input type="text" maxlength="40" value="${esc(value||'')}" aria-label="Nazwa" style="width:100%"></p><div class="row"><button class="btn" type="button" data-v="0">Anuluj</button><button class="btn pri" type="submit">${esc(okText)}</button></div></form>`;
+    const inp=o.querySelector('input'), done=v=>{ o.remove(); res(v); };
+    o.addEventListener('click',e=>{ if(e.target===o||e.target.closest('[data-v]')) done(null); });
+    o.addEventListener('keydown',e=>{ if(e.key==='Escape') done(null); });
+    o.querySelector('form').addEventListener('submit',e=>{ e.preventDefault(); const v=inp.value.trim(); if(v) done(v); else inp.focus(); });
+    document.body.appendChild(o); inp.focus(); inp.select();
+  });
+}
+
 const left = k => game ? game.key.filter((x,j)=>x===k&&!game.revealed[j]).length : 0;
 const captainOf = t => (config.players||[]).find(p=>p.t===t&&p.c);
 function saveConfig(){ return store.set('config',config); }
@@ -2964,7 +3052,7 @@ function hostBoard(){
   const hidden=game.winner && ui.hideWin===game.id;
   let html=`<div class="top">${tb('r')}<div class="mid"><span class="badge ${game.turn}">Ruch: ${esc(tn(game.turn))}</span><button class="btn sm" data-act="endturn">Koniec tury</button>${target?`<span class="mt">Mecz do ${target} · ${sc.r||0} : ${sc.b||0}</span>`:''}${na>1?`<span class="mt">☠ Zabójców: ${na}</span>`:''}</div>${tb('b')}</div>
   <div class="board ${shakeNext?'shake':''}">${game.words.map((_,i)=>cardHtml(i)).join('')}</div>
-  <div class="foot"><button class="btn sm" data-act="newgame">Nowa gra</button><button class="btn sm" data-act="qr">Kody QR kapitanów</button><button class="btn sm" data-act="setup">Ustawienia</button>${hidden?'<button class="btn sm pri" data-act="showwin">Podsumowanie</button>':''}</div>`;
+  <div class="foot">${LOBBY_BTN}<button class="btn sm" data-act="newgame">Nowa gra</button><button class="btn sm" data-act="savegame">💾 ${game.saveId?'Zapisano':'Zapisz grę'}</button><button class="btn sm" data-act="saves">Zapisane gry</button><button class="btn sm" data-act="qr">Kody QR kapitanów</button><button class="btn sm" data-act="setup">Ustawienia</button>${hidden?'<button class="btn sm pri" data-act="showwin">Podsumowanie</button>':''}</div>`;
   if(ui.qr) html+=qrOverlay();
   if(game.winner && !ui.winHold && !hidden) html+=winDialog();
   lastId=game.id; lastRev=game.revealed.slice(); lastLeft=now; shakeNext=false;
@@ -3042,12 +3130,12 @@ async function assassinScene(i,actor){
 }
 function splashView(){
   const word='TAJNIACY'.split('').map((c,i)=>`<span style="animation-delay:${(i*.09).toFixed(2)}s">${c}</span>`).join('');
-  const cont=game&&!game.winner;
-  return `<div class="splash"><div class="logo">${word}</div><div class="stamp">ŚCIŚLE TAJNE</div>
+  const cont=game&&!game.winner, nSaves=loadSaves().length;
+  return `<div class="splash">${LOBBY_BTN}<div class="logo">${word}</div><div class="stamp">ŚCIŚLE TAJNE</div>
   <p class="tag">Dwóch kapitanów zna prawdę. Reszta ma tylko podpowiedzi.</p>
   <div class="row" style="justify-content:center;margin-top:28px">${cont
     ?'<button class="btn pri big" data-act="enter">▶ Wróć do gry</button><button class="btn big" data-act="entersetup">Ustawienia</button>'
-    :`<button class="btn pri big" data-act="entersetup">▶ Zaczynamy</button>${game?'<button class="btn big" data-act="enter">Pokaż planszę</button>':''}`}</div></div>`;
+    :`<button class="btn pri big" data-act="entersetup">▶ Zaczynamy</button>${game?'<button class="btn big" data-act="enter">Pokaż planszę</button>':''}`}${nSaves?`<button class="btn big" data-act="saves">Zapisane gry (${nSaves})</button>`:''}</div></div>`;
 }
 function setupView(){
   const cats=parseWords(ui.draftText!=null?ui.draftText:(config.text==null?DEFAULT_TEXT:config.text));
@@ -3080,7 +3168,7 @@ function setupView(){
   <div class="panel"><h2>Dźwięk</h2>
     <div class="row"><label class="lbl"><input type="checkbox" id="smus" ${Snd.st.m?'checked':''}> Muzyka</label><input type="range" id="vmus" min="0" max="1" step=".05" value="${Snd.st.mv}">
       <label class="lbl" style="margin-left:14px"><input type="checkbox" id="ssfx" ${Snd.st.s?'checked':''}> Efekty</label><input type="range" id="vsfx" min="0" max="1" step=".05" value="${Snd.st.sv}"></div></div>
-  <div class="row" style="margin-top:18px"><button class="btn pri big" data-act="start">▶ Start nowej gry</button>${game?'<button class="btn" data-act="back">Wróć do planszy</button>':''}</div></div>`;
+  <div class="row" style="margin-top:18px"><button class="btn pri big" data-act="start">▶ Start nowej gry</button>${game?'<button class="btn" data-act="back">Wróć do planszy</button>':''}<button class="btn" data-act="saves">Zapisane gry</button>${LOBBY_BTN}</div></div>`;
 }
 function render(){
   document.body.dataset.theme=config.theme||'classic';
@@ -3135,6 +3223,21 @@ const acts={
   back(){ syncDraft(); ui.screen='board'; render(); },
   async newgame(){ if(await ask("Rozpocząć nową grę?","Tak, nowa gra","Obecna plansza zostanie zastąpiona.")) newGame(); },
   newgame2(){ newGame(); },
+  async savegame(){
+    if(!game) return;
+    const def=game.saveName||`${tn('r')} vs ${tn('b')}, ${new Date().toLocaleString('pl-PL',{day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'})}`;
+    const name=await askText(game.saveId?"Zapisz grę (zmień nazwę)":"Zapisz grę","Zapisz",def);
+    if(name) saveGame(name.slice(0,40));
+  },
+  saves(){ savesDialog(); },
+  async lobby(){
+    const live=game&&!game.winner;
+    const t=document.getElementById('wtext');
+    const draft=t&&t.value!==(config.text==null?DEFAULT_TEXT:config.text);
+    const info=[live?(game.saveId?`Gra „${game.saveName}” jest zapisana na liście zapisów.`:"Gra zostaje w pamięci – po powrocie kliknij „Wróć do gry”."):"",
+                draft?"Niezapisane zmiany w liście haseł przepadną.":""].filter(Boolean).join(' ');
+    if(await ask("Wyjść do lobby?","Tak, wyjdź",info)) location.href='/';
+  },
   qr(){ ui.qr=true; render(); },
   closeqr(){ ui.qr=false; render(); if(game&&!game.winner&&!game.revealed.some(Boolean)){ Snd.play('turn'); turnBanner(game.turn,'Zaczynają'); } },
   closewin(){ ui.hideWin=game.id; render(); },
@@ -3181,23 +3284,8 @@ document.addEventListener('change',e=>{
 function updateSndUi(){ const m=document.getElementById('bmusic'), f=document.getElementById('bsfx'); if(m) m.classList.toggle('off',!Snd.st.m); if(f) f.classList.toggle('off',!Snd.st.s); }
 
 /* ---------- start ---------- */
-const PASS_HASH="6104da49c1ed7c94f9ced9e7135e31cc69aabf88f5bce50a2e73bb56a602e417";
-async function sha(x){ const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('tajniacy:'+x)); return [...new Uint8Array(b)].map(v=>v.toString(16).padStart(2,'0')).join(''); }
-function gate(){
-  return new Promise(async res=>{
-    try{ if(localStorage.getItem('tj_ok')===PASS_HASH) return res(); }catch(e){}
-    const o=document.createElement('div'); o.className='ov'; o.style.background='#f4e6cf';
-    o.innerHTML='<form class="dlg"><h2>Tajniacy</h2><p>Podaj hasło</p><div class="row"><input type="password" id="gpw" autocomplete="current-password" style="width:70%"><button class="btn pri" type="submit">Wejdź</button></div><p id="gerr" class="note" style="color:#c4472c"></p></form>';
-    document.body.appendChild(o); document.getElementById('gpw').focus();
-    o.querySelector('form').addEventListener('submit',async e=>{
-      e.preventDefault();
-      if(await sha(document.getElementById('gpw').value)===PASS_HASH){ try{localStorage.setItem('tj_ok',PASS_HASH);}catch(_){} o.remove(); res(); }
-      else{ document.getElementById('gerr').textContent='Złe hasło'; }
-    });
-  });
-}
-(async function init(){
-  await gate();
+// Hasło obsługuje wspólne /auth.js z lobby PL3Y (repo egozaur.github.io).
+(function init(){
   store=makeLocalStore(); updateSndUi();
   store.sub('config',d=>{
     if(d){ config={ text:null, cats:null, players:[], baseUrl:"", names:{}, theme:"classic", match:0, assassins:1, score:{r:0,b:0}, ...d }; config.names=config.names||{}; config.score=config.score||{r:0,b:0}; }
@@ -3209,6 +3297,9 @@ function gate(){
     game=d; ui.loaded.game=true;
     if(ui.screen!=='setup') render();
   });
+  // gra z listy zapisów aktualizuje swój zapis po każdym ruchu i zmianie wyniku
+  store.sub('game',()=>syncSave());
+  store.sub('config',()=>syncSave());
   setTimeout(()=>{ if(!ui.loaded.config||!ui.loaded.game){ ui.loaded.config=ui.loaded.game=true; render(); } },10000);
 })();
 </script>
