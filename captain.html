@@ -42,9 +42,13 @@ body{margin:0;min-height:100dvh;font-family:'Nunito',system-ui,sans-serif;color:
 .c.rv{cursor:default}
 .leg{padding:8px 12px 14px;font-size:.82rem;font-weight:700;text-align:center;opacity:.85;line-height:1.5}
 .err{padding:40px 20px;text-align:center;font-weight:800;font-size:1.2rem}
-.cover{position:fixed;inset:0;z-index:20;background:var(--bg2);color:var(--ink);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;padding:20px;border:0;width:100%;font:inherit;font-weight:900;font-size:1.3rem}
-.cover span{font-size:3rem}
-.cover small{font-weight:700;opacity:.7;font-size:.95rem}
+/* klucz ukryty: plansza jak na ekranie TV – zakryte karty bez kolorów, odkryte w kolorze drużyny */
+.c.h{background:var(--card);border-color:var(--cardb);color:var(--ink);cursor:default}
+.c.h.r{background:var(--r);border-color:var(--r);color:#fff}
+.c.h.b{background:var(--b);border-color:var(--b);color:#fff}
+.c.h.n{background:var(--n);border-color:var(--n);color:var(--nrev)}
+.c.h.a{background:var(--a);border-color:#000;color:#fff}
+.tools button.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 </style>
 </head>
 <body data-theme="noir">
@@ -101,7 +105,7 @@ function draw(){
     const t=o[1], d=decode(o[2]);
     if(d.words.length!==25||d.key.length!==25) throw 0;
     const id=hash(o[2]);
-    if(!cur||cur.id!==id){ cur={t,d,id}; loadMarks(id); hidden=false; }
+    if(!cur||cur.id!==id){ cur={t,d,id}; loadMarks(id); }
     board();
   }catch(e){ shell('Nieprawidłowy lub uszkodzony kod. Zeskanuj go ponownie.'); }
 }
@@ -112,7 +116,7 @@ function drawLive(){
   if(!v) return shell(live.status==='reconnecting'?'Brak połączenia z serwerem. Próbuję ponownie…':'Łączę z grą…');
   if(!v.game) return shell('Połączono jako kapitan drużyny <b>'+esc(v.names[live.t])+'</b>.<br>Czekam na planszę od prowadzącego…', v.theme);
   const g=v.game, id=live.code+'_'+g.id;
-  if(!cur||cur.id!==id){ cur={id}; loadMarks(id); hidden=false; }
+  if(!cur||cur.id!==id){ cur={id}; loadMarks(id); }
   Object.assign(cur,{t:live.t, d:{key:g.key, words:g.words, names:v.names, theme:v.theme}, revealed:g.revealed, turn:g.turn, winner:g.winner});
   board();
 }
@@ -131,22 +135,25 @@ function board(){
   }
   document.getElementById('root').innerHTML=`<div class="hdr ${t}"><div><small>Jesteś kapitanem drużyny</small><b>${esc(d.names[t])}</b></div><div class="lf"><small>Zostało</small><b>${mine-done}</b></div></div>
   ${bar}
-  <div class="tools"><button data-a="hide">🔒 Ukryj klucz</button><button data-a="dark">${dark?'☀️ Motyw gry':'🌙 Tryb ciemny'}</button><button data-a="clear">↺ Wyczyść znaczniki</button></div>
-  <div class="board">${d.words.map((w,i)=>`<div class="c ${d.key[i]} m${mk(i)} ${rv[i]?'rv':''}" data-i="${i}">${esc(w)}<i>${G[d.key[i]]}</i>${mk(i)?`<em>${MK[mk(i)]}</em>`:''}</div>`).join('')}</div>
-  <div class="leg">${live?'Odkryte karty oznaczają się same (✓).<br>Dotknij hasło, żeby dodać znacznik (tylko u Ciebie): ★ w mojej podpowiedzi → ⚠ ryzykowne → brak':'Dotknij hasło, żeby zmienić znacznik (tylko u Ciebie):<br>★ w mojej podpowiedzi → ⚠ ryzykowne → ✓ odkryte → brak'}<br>▲ ${esc(d.names.r)} · ◆ ${esc(d.names.b)} · ● neutralne · ☠ zabójca</div>
-  ${hidden?`<button class="cover" data-a="show"><span>🔒</span>Klucz ukryty<small>Dotknij, aby pokazać</small></button>`:''}`;
+  <div class="tools"><button data-a="hide" class="${hidden?'on':''}">${hidden?'🔑 Pokaż klucz':'🙈 Ukryj klucz'}</button><button data-a="dark">${dark?'☀️ Motyw gry':'🌙 Tryb ciemny'}</button>${hidden?'':'<button data-a="clear">↺ Wyczyść znaczniki</button>'}</div>
+  <div class="board">${d.words.map((w,i)=>hidden
+    // bez klucza: kolor tylko dla kart odkrytych (w trybie offline = oznaczonych ✓), bez symboli i znaczników
+    ?`<div class="c h ${mk(i)===3?d.key[i]:''}" data-i="${i}">${esc(w)}</div>`
+    :`<div class="c ${d.key[i]} m${mk(i)} ${rv[i]?'rv':''}" data-i="${i}">${esc(w)}<i>${G[d.key[i]]}</i>${mk(i)?`<em>${MK[mk(i)]}</em>`:''}</div>`).join('')}</div>
+  <div class="leg">${hidden?'Klucz ukryty – widzisz planszę tak jak na ekranie TV.<br>Dotknij „Pokaż klucz”, żeby wrócić do kolorów.':live?'Odkryte karty oznaczają się same (✓).<br>Dotknij hasło, żeby dodać znacznik (tylko u Ciebie): ★ w mojej podpowiedzi → ⚠ ryzykowne → brak':'Dotknij hasło, żeby zmienić znacznik (tylko u Ciebie):<br>★ w mojej podpowiedzi → ⚠ ryzykowne → ✓ odkryte → brak'}${hidden?'':`<br>▲ ${esc(d.names.r)} · ◆ ${esc(d.names.b)} · ● neutralne · ☠ zabójca`}</div>
+  `;
   fitCards('.c');
 }
 
 document.addEventListener('click',e=>{
   const a=e.target.closest('[data-a]');
   if(a){ const v=a.dataset.a;
-    if(v==='hide') hidden=true; else if(v==='show') hidden=false;
+    if(v==='hide') hidden=!hidden;
     else if(v==='dark'){ dark=!dark; ls.set('tj_cdark',dark?'1':'0'); }
     else if(v==='clear'){ if(marks.some(Boolean) && confirm('Wyczyścić wszystkie znaczniki?')){ marks=Array(25).fill(0); saveMarks(); } }
     draw(); lock(); return; }
   const c=e.target.closest('.c');
-  if(c&&cur){
+  if(c&&cur&&!hidden){
     const i=+c.dataset.i;
     if(cur.revealed&&cur.revealed[i]) return;
     marks[i]=(marks[i]+1)%(live?3:4); saveMarks(); draw(); lock();

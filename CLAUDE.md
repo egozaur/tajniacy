@@ -34,5 +34,6 @@ It is deployed via GitHub Pages at `https://pl3y.pl/tajniacy/`. The domain belon
 ### `captain.html`: captain's key on a phone (opened from a QR code)
 - Live format `#<CODE>.<r|b>.<captain token>`: connects to the room via `net.js`, receives the board, marks revealed cards (✓) and the turn by itself, and switches to the next game automatically (manual ★/⚠ marks are kept per `tjm_<code>_<game id>`).
 - Offline format: the host encodes the game into the URL hash as `#<team>.<payload>`, where team is `r` or `b`. `payload()` in `index.html` produces `base64url(UTF-8("<25-char key>|<25 words>|<red name>|<blue name>|<theme>"))`, and `decode()` in `captain.html` parses it. **If you change the payload format, change both files together.**
+- **Hide key** („Ukryj klucz”) is a toggle: the board switches to the public TV view (unrevealed cards neutral, revealed ones in their colour; offline, cards marked ✓ count as revealed), without key glyphs or ★/⚠ marks, and taps are ignored. The state survives new boards.
 - In the offline format there is no sync with the host. Captains track cards themselves with local marks, stored in `localStorage` under `tjm_<hash of payload>`.
 - It loads the same `common.css` and `common.js` as `index.html`, so theme changes apply to both pages.
