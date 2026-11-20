@@ -2332,6 +2332,9 @@ select{font-family:inherit;font-size:1rem;border:2px solid var(--cardb);border-r
 .btn{border:0;border-radius:14px;padding:.7em 1.2em;font-weight:800;font-size:1rem;background:var(--paper);box-shadow:0 2px 0 var(--cardb);border:2px solid var(--cardb)}
 .btn:active{transform:translateY(1px)}
 .splash .tolobby{position:absolute;top:18px;left:18px;z-index:2}
+.tolobby{transition:border-color .15s,background .15s}
+@media (hover:hover){.tolobby:hover{border-color:var(--ink);background:var(--paper2)}}
+.tolobby:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 .saves{display:flex;flex-direction:column;gap:8px;margin:12px 0;text-align:left}
 .save{display:flex;align-items:center;gap:8px;background:var(--paper2);border:2px solid var(--cardb);border-radius:12px;padding:8px 10px}
 .save.cur{border-color:var(--ink)}
