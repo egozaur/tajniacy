@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="pl">
+<head><meta charset="utf-8"><title>E2E: Tajniacy we dwoje</title>
+<style>*{box-sizing:border-box}body{margin:0;font:13px monospace;background:#111;color:#ddd}#f{display:grid;grid-template-columns:1fr 1fr;gap:4px;height:80vh}iframe{width:100%;height:100%;border:1px solid #444;background:#fff}pre{margin:6px;white-space:pre-wrap}</style></head>
+<body>
+<div id="f"><iframe id="a"></iframe><iframe id="b"></iframe></div>
+<pre id="out"></pre>
+<script>
+/* Test end-to-end trybu dla 2 osób na lokalnym serwerze (?local=1, SharedWorker z prawdziwą klasą TjDuo).
+   Dwie ramki klikają prawdziwe przyciski: zakładanie pokoju, dołączanie linkiem, zakładka Zasady, start,
+   hasła, zgadywanie z potwierdzeniem, pudło, koniec tury, wygrana, nowa gra, poddanie się.
+   Uruchom: dev/serve-duo.ps1, potem http://localhost:8094/tajniacy/dev/duo-e2e.html (headless Edge, czytaj E2E RESULT). */
+const out = document.getElementById('out');
+const log = m => { out.textContent += m + '\n'; console.log(m); };
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const A = document.getElementById('a'), B = document.getElementById('b');
+const doc = f => f.contentDocument;
+async function until(fn, what, ms = 8000) {
+  const t0 = Date.now();
+  while (Date.now() - t0 < ms) { try { const v = fn(); if (v) return v; } catch (e) {} await sleep(40); }
+  throw new Error('Timeout: ' + what);
+}
+const q = (f, s) => doc(f).querySelector(s);
+const qa = (f, s) => [...doc(f).querySelectorAll(s)];
+const click = el => el.click();
+const type = (el, v) => { el.value = v; el.dispatchEvent(new Event('input', { bubbles: true })); };
+const words = f => qa(f, '.board .card .w').map(e => e.textContent);
+const banner = f => (q(f, '.banner') || {}).textContent || '';
+
+function load(f, url) { return new Promise(r => { f.onload = () => r(); f.src = url; }); }
+let fails = 0;
+// ?stop=lobby|guess|end&view=a|b|g|s: zatrzymuje test w danym miejscu i pokazuje jedną ramkę na cały ekran (zrzuty).
+const P = new URLSearchParams(location.search);
+function stop(name, frames) {
+  if (P.get('stop') !== name) return;
+  const f = frames[P.get('view') || 'a'] || A;
+  document.getElementById('out').style.display = 'none';
+  Object.assign(document.getElementById('f').style, { display: 'block', height: '100vh' });
+  (f === A ? B : A).style.display = 'none';
+  document.title = 'READY';
+  throw new Error('STOP');
+}
+function check(c, msg) { if (!c) { fails++; log('✗ ' + msg); } else log('✓ ' + msg); }
+
+async function confirmPick(f, i) {
+  click(qa(f, '.board .card')[i]);
+  const ok = await until(() => q(f, '.ov [data-v="1"]'), 'okno potwierdzenia');
+  check(/Odsłonić/.test(q(f, '.ov h2').textContent), 'okno „Odsłonić to hasło?”');
+  click(ok);
+}
+// Kto teraz podaje: ramka, w której jest pole hasła.
+async function giverFrame() { return until(() => (q(A, '#clue') ? A : q(B, '#clue') ? B : null), 'pole hasła u podającego'); }
+
+async function run() {
+  const base = location.origin + '/tajniacy/duo.html?local=1';
+  await load(A, base + '&slot=1');
+  await until(() => q(A, '#nick'), 'menu A');
+  check(/Zasady/.test(doc(A).body.textContent), 'zasady w menu');
+  type(q(A, '#nick'), 'Ala'); click(q(A, '[data-act="create"]'));
+  await until(() => q(A, '.code'), 'pokój założony');
+  const code = q(A, '.code').textContent.trim();
+  check(/^[A-Z0-9]{5}$/.test(code), 'kod pokoju ' + code);
+  check(q(A, '[data-act="start"]').disabled, 'start zablokowany bez drugiej osoby');
+
+  await load(B, base + '&slot=2#' + code);
+  await until(() => q(B, '#nick'), 'pytanie o nick B');
+  type(q(B, '#nick'), 'Ola'); click(q(B, '[data-act="joinnick"]'));
+  await until(() => qa(B, '.seat:not(.empty)').length === 2, 'B w pokoju');
+  await until(() => qa(A, '.seat:not(.empty)').length === 2 && !q(A, '[data-act="start"]').disabled, 'A widzi B');
+  check(!q(B, '[data-act="start"]'), 'gość nie ma przycisku Start');
+  click(q(B, '[data-act="tab"][data-v="rules"]'));
+  await until(() => q(B, '.panel.rules'), 'zakładka Zasady');
+  check(/15 słów/.test(q(B, '.panel.rules').textContent), 'zakładka Zasady w lobby pokoju');
+  stop('rules', { a: A, b: B });
+  click(q(B, '[data-act="tab"][data-v="room"]'));
+  stop('lobby', { a: A, b: B });
+  click(q(A, '[data-act="turns"][data-v="0"]'));
+  await until(() => q(B, '[data-act="turns"][data-v="0"].on'), 'limit tur u B');
+
+  click(q(A, '[data-act="start"]'));
+  await until(() => qa(A, '.board .card').length === 25 && qa(B, '.board .card').length === 25, 'plansze');
+  check(words(A).join() === words(B).join(), 'ta sama plansza u obu');
+  check(qa(A, '.card.k-g').length === 9 && qa(B, '.card.k-g').length === 9, '9 agentów na każdym kluczu');
+  check(qa(A, '.card.k-a').length === 3 && qa(B, '.card.k-a').length === 3, '3 zabójców na każdym kluczu');
+  const kA = qa(A, '.board .card').map(c => c.className), kB = qa(B, '.board .card').map(c => c.className);
+  check(kA.join() !== kB.join(), 'różne klucze');
+
+  // 1) pudło: zgadujący klika postronnego podającego
+  let G = await giverFrame(), S = G === A ? B : A;
+  check(!q(S, '.card.can'), 'przed hasłem zgadujący nie klika');
+  type(q(G, '#clue'), 'test'); click(q(G, '[data-act="num"][data-v="2"]')); click(q(G, '[data-act="clue"]'));
+  await until(() => q(S, '.card.can'), 'zgadujący może klikać');
+  check(!q(G, '.card.can'), 'podający nie może klikać');
+  check(/test · 2/.test(banner(S)), 'hasło widoczne u zgadującego');
+  const gk = qa(G, '.board .card').map(c => (c.classList.contains('k-g') ? 'g' : c.classList.contains('k-a') ? 'a' : 'n'));
+  const neutral = gk.indexOf('n');
+  await confirmPick(S, neutral);
+  await until(() => q(S, '#clue'), 'po pudle zmiana ról');
+  check(/✕/.test(qa(A, '.board .card')[neutral].textContent), 'znacznik pudła na karcie');
+
+  // 2) koniec tury przyciskiem
+  [G, S] = [S, G];
+  type(q(G, '#clue'), 'drugie'); click(q(G, '[data-act="clue"]'));
+  await until(() => q(S, '[data-act="endturn"]'), 'przycisk Koniec tury');
+  await sleep(300); stop('guess', { a: A, b: B, g: G, s: S });
+  click(q(S, '[data-act="endturn"]')); click(await until(() => q(S, '.ov [data-v="1"]'), 'potwierdzenie końca tury'));
+  await until(() => q(S, '#clue'), 'koniec tury zamienia role');
+
+  // 3) gra do wygranej: podający wskazuje swoich agentów
+  let guard = 0;
+  while (!q(A, '.res') && guard++ < 60) {
+    G = await giverFrame().catch(() => null);
+    if (!G) break;
+    S = G === A ? B : A;
+    const agents = qa(G, '.board .card').map((c, i) => (c.classList.contains('k-g') ? i : -1)).filter(i => i >= 0);
+    type(q(G, '#clue'), 'hasło' + guard); click(q(G, '[data-act="num"][data-v="9"]')); click(q(G, '[data-act="clue"]'));
+    await until(() => q(S, '.card.can'), 'zgadywanie ' + guard);
+    for (const i of agents) {
+      if (!qa(S, '.board .card')[i].classList.contains('can')) break;
+      const before = qa(A, '.card.found').length;
+      await confirmPick(S, i);
+      await until(() => qa(A, '.card.found').length === before + 1, 'odkryty agent');
+      if (q(A, '.res') || !q(S, '[data-act="endturn"]')) break;
+    }
+    await sleep(100);
+    if (q(S, '[data-act="endturn"]')) { click(q(S, '[data-act="endturn"]')); click(await until(() => q(S, '.ov [data-v="1"]'), 'koniec tury')); }
+    await until(() => q(A, '.res') || q(A, '#clue') || q(B, '#clue'), 'następna tura');
+  }
+  await until(() => q(A, '.res') && q(B, '.res'), 'okno końca gry', 4000);
+  check(/WYGRANA/.test(q(A, '.res').textContent) && /WYGRANA/.test(q(B, '.res').textContent), 'wygrana u obu');
+  check(qa(A, '.card.found').length === 15, '15 odkrytych agentów');
+  await sleep(300); stop('end', { a: A, b: B });
+  click(q(A, '.ov [data-act="closeend"].btn'));
+  click(q(A, '[data-act="keyof"][data-v="partner"]'));
+  await until(() => q(A, '[data-act="keyof"][data-v="partner"].on'), 'klucz partnera po końcu');
+
+  // 4) nowa gra, poddanie się
+  const old = words(A).join();
+  click(q(B, '.ov [data-act="again"]'));
+  await until(() => words(A).join() !== old && !q(A, '.res') && qa(A, '.card.found').length === 0, 'nowa gra');
+  check(words(A).join() === words(B).join(), 'nowa plansza u obu');
+  click(q(A, '[data-act="surrender"]')); click(await until(() => q(A, '.ov [data-v="1"]'), 'potwierdzenie poddania'));
+  await until(() => q(B, '.res'), 'koniec po poddaniu');
+  check(/PRZEGRANA/.test(q(B, '.res').textContent), 'poddanie = przegrana');
+
+  // 5) odświeżenie strony: powrót do tego samego miejsca
+  await new Promise(r => { B.onload = () => r(); B.contentWindow.location.reload(); });
+  await until(() => qa(B, '.board .card').length === 25, 'powrót po odświeżeniu');
+  check(!q(B, '#nick'), 'po odświeżeniu bez pytania o nick');
+  check(words(B).join() === words(A).join(), 'po odświeżeniu ta sama plansza');
+}
+run().then(() => log(`E2E RESULT: ${fails ? 'FAIL' : 'PASS'} (${fails} błędów)`), e => log('E2E RESULT: FAIL ' + (e && e.stack || e)));
+</script>
+</body></html>

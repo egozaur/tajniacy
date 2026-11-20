@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<script src="/auth.js"></script>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tajniacy we dwoje</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-title" content="PL3Y">
+<link rel="manifest" href="/site.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;800;900&family=Special+Elite&family=Bungee&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="common.css">
+<script src="common.js"></script>
+<script src="words.js"></script>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{font-family:'Nunito',system-ui,sans-serif;color:var(--ink);background:radial-gradient(circle at 20% 0%,var(--bg) 0,var(--bg2) 100%);background-attachment:fixed;-webkit-tap-highlight-color:transparent;
+  --g:#3c9a58;--gt:rgba(60,154,88,.22);--gtx:#bff0cc}
+body[data-theme=light],body[data-theme=classic]{--gt:rgba(60,154,88,.18);--gtx:#1d5e30}
+button,input,select{font-family:inherit;color:inherit}
+button{cursor:pointer}
+h1,h2,h3{margin:0;font-family:var(--hfont)}
+#app{min-height:100dvh;display:flex;flex-direction:column}
+.btn{border-radius:14px;padding:.65em 1.1em;font-weight:800;font-size:1rem;background:var(--paper);box-shadow:0 2px 0 var(--cardb);border:2px solid var(--cardb);transition:border-color .15s,background .15s}
+.btn:active{transform:translateY(1px)}
+.btn:disabled{opacity:.45;cursor:default;transform:none}
+@media (hover:hover){.btn:not(:disabled):hover{border-color:var(--ink)}}
+.btn:focus-visible,.card:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn.pri{background:var(--ink);color:var(--on-ink);border-color:var(--ink);box-shadow:none}
+.btn.go{background:var(--g);color:#fff;border-color:var(--g);box-shadow:none}
+.btn.danger{border-color:var(--r);color:var(--rtx)}
+.btn.sm{padding:.4em .8em;font-size:.9rem;border-radius:10px}
+.btn.big{font-size:1.2rem;padding:.75em 1.4em}
+.btn.on{background:var(--accent);color:#2a2014;border-color:var(--accent)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.muted{opacity:.75}
+input[type=text]{font-size:1.05rem;border:2px solid var(--cardb);border-radius:12px;padding:.6em .8em;background:var(--paper2);min-width:0}
+.panel{background:var(--paper);border:2px solid var(--cardb);border-radius:20px;padding:20px;width:100%;max-width:640px}
+.wrap{flex:1;display:flex;flex-direction:column;align-items:center;gap:16px;padding:24px 16px}
+.logo{font-family:var(--hfont);font-size:clamp(2.2rem,9vw,4rem);letter-spacing:.06em;text-align:center;line-height:1}
+.logo small{display:block;font-size:.38em;letter-spacing:.3em;opacity:.8;margin-top:.4em}
+.stamp{display:inline-block;border:3px solid var(--r);color:var(--r);font-family:var(--hfont);padding:.15em .6em;transform:rotate(-4deg);letter-spacing:.1em;font-size:.95rem}
+.lbl{font-weight:800;display:block;margin:0 0 6px}
+.field{display:flex;gap:8px}
+.field input{flex:1}
+.or{text-align:center;opacity:.6;font-weight:800;margin:4px 0}
+.err{color:var(--rtx);font-weight:800}
+.tabs{display:flex;gap:6px;width:100%;max-width:640px}
+.tabs button{flex:1;border:2px solid var(--cardb);border-bottom:0;border-radius:14px 14px 0 0;padding:.6em;font-weight:900;background:var(--paper2);opacity:.75}
+.tabs button.on{background:var(--paper);opacity:1}
+.tabs+.panel{border-top-left-radius:0;border-top-right-radius:0;margin-top:-16px}
+.code{font-family:var(--hfont);font-size:2.4rem;letter-spacing:.2em}
+.seats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
+.seat{border:2px solid var(--cardb);border-radius:14px;padding:10px 12px;font-weight:800;display:flex;align-items:center;gap:8px;min-width:0}
+.seat span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.seat.empty{border-style:dashed;opacity:.6;font-weight:600}
+.dot{width:10px;height:10px;border-radius:50%;background:#888;flex:none}
+.dot.on{background:var(--g);box-shadow:0 0 0 3px var(--gt)}
+.cats{display:flex;flex-wrap:wrap;gap:6px 14px;margin:6px 0 4px}
+.cats label{display:flex;gap:6px;align-items:center;font-weight:700}
+.sect{margin-top:16px}
+.rules h3{margin:16px 0 6px;font-size:1.15rem}
+.rules p,.rules li{line-height:1.5}
+.rules ul{padding-left:1.2em;margin:6px 0}
+.rules .ex{display:inline-flex;align-items:center;justify-content:center;min-width:1.6em;height:1.6em;border-radius:6px;font-weight:900;padding:0 .3em;vertical-align:middle}
+.ex.g{background:var(--g);color:#fff}.ex.a{background:#000;color:#fff}.ex.n{background:var(--nt);border:1px solid var(--cardb)}.ex.x{background:var(--paper2);border:1px dashed var(--cardb)}
+
+/* ---------- plansza ---------- */
+.top{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 14px;border-bottom:2px solid var(--cardb);background:var(--paper2)}
+.top .ttl{font-family:var(--hfont);font-size:1.2rem;margin-right:auto}
+.stat{font-weight:900;padding:.3em .8em;border-radius:99px;background:var(--paper);border:2px solid var(--cardb);white-space:nowrap}
+.stat.g{border-color:var(--g)}
+.net{font-size:.85rem;font-weight:800;opacity:.8}
+.net.bad{color:var(--rtx);opacity:1}
+.game{flex:1;display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:16px;padding:14px;max-width:1300px;width:100%;margin:0 auto}
+.main{display:flex;flex-direction:column;gap:12px;min-width:0}
+.banner{border-radius:16px;padding:12px 16px;border:2px solid var(--cardb);background:var(--paper);display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.banner.me{border-color:var(--accent);box-shadow:0 0 0 3px rgba(212,175,55,.25)}
+.banner .who{font-weight:900;font-size:1.1rem}
+.banner .sub{opacity:.8;font-weight:700}
+.clue{font-family:var(--hfont);font-size:1.6rem;letter-spacing:.04em;padding:.1em .6em;border-radius:12px;background:var(--ink);color:var(--on-ink)}
+.cform{display:flex;gap:8px;flex-wrap:wrap;align-items:center;width:100%}
+.cform input{flex:1 1 180px}
+.nums{display:flex;gap:4px;flex-wrap:wrap}
+.nums button{width:2.3em;height:2.3em;border-radius:10px;border:2px solid var(--cardb);background:var(--paper2);font-weight:900}
+.nums button.on{background:var(--accent);border-color:var(--accent);color:#2a2014}
+.board{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:clamp(5px,1vw,10px)}
+.card{position:relative;aspect-ratio:3/2;border-radius:12px;border:2px solid var(--cardb);background:var(--card);padding:4px;display:flex;align-items:center;justify-content:center;text-align:center;font-weight:900;font-size:clamp(.72rem,1.7vw,1.15rem);overflow:hidden;transition:transform .15s,box-shadow .15s,opacity .2s}
+.card .w{display:block;width:100%;max-height:100%;overflow:hidden;line-height:1.1;word-break:normal;overflow-wrap:normal;position:relative;z-index:1} /* bez łamania w środku słowa: fitCards() zmniejsza czcionkę */
+.card.can{cursor:pointer}
+@media (hover:hover){.card.can:hover{transform:translateY(-3px);box-shadow:0 6px 0 var(--cardb);border-color:var(--ink)}}
+.card:not(.can){cursor:default}
+/* mój klucz (widoczny tylko u mnie) */
+.card.k-g{background:var(--gt);border-color:var(--g)}
+.card.k-a{background:#111;color:#f1e9d6;border-color:#000}
+.card .gl{position:absolute;top:3px;right:6px;font-size:.8em;opacity:.85;z-index:1}
+.card.k-g .gl{color:var(--g)}
+/* odkryty agent */
+.card.found{background:var(--g);border-color:var(--g);color:#fff}
+.card.found .ill{position:absolute;inset:0;width:100%;height:100%;opacity:.35}
+.card.found .w{text-shadow:0 1px 2px rgba(0,0,0,.6);background:rgba(10,30,16,.55);border-radius:6px;padding:1px 4px;width:auto;max-width:100%}
+.card.found.fresh{animation:flip .7s ease}
+@keyframes flip{0%{transform:rotateY(90deg)}100%{transform:rotateY(0)}}
+/* pudła: postronny u danego gracza */
+.marks{position:absolute;left:4px;bottom:3px;display:flex;gap:3px;z-index:1}
+.marks i{font-style:normal;font-size:.62em;font-weight:900;padding:1px 5px;border-radius:6px;background:var(--paper2);color:var(--ink);border:1px solid var(--cardb);max-width:6em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.card.dead{opacity:.45}
+.card.boom{background:#000;color:#ff5a4a;border-color:var(--r);animation:shake .5s}
+.card.miss.fresh{animation:shake .45s}
+@keyframes shake{0%,100%{transform:none}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(3px)}}
+.keytools{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.side{display:flex;flex-direction:column;gap:12px;min-width:0}
+.box{background:var(--paper);border:2px solid var(--cardb);border-radius:16px;padding:12px 14px}
+.box h3{font-size:1rem;margin-bottom:8px}
+.legend{display:grid;gap:6px;font-weight:700;font-size:.92rem}
+.log{display:flex;flex-direction:column;gap:8px;max-height:46vh;overflow:auto;font-size:.92rem}
+.log .e{border-left:4px solid var(--cardb);padding-left:8px}
+.log .e b{font-family:var(--hfont)}
+.log .p{display:inline-block;margin:2px 3px 0 0;padding:0 6px;border-radius:6px;font-weight:800;font-size:.85em}
+.p.g{background:var(--g);color:#fff}.p.n{background:var(--nt);color:var(--ntx)}.p.a{background:#000;color:#fff}
+.mobile-only{display:none}
+@media (max-width:860px){
+  .game{grid-template-columns:1fr;padding:10px}
+  .side{order:2}
+  .log{max-height:none}
+  .card{border-radius:9px;border-width:2px;font-size:clamp(.62rem,3.1vw,.95rem);aspect-ratio:4/3}
+  .card .gl{font-size:.7em;top:1px;right:3px}
+  .marks i{font-size:.55em;padding:0 3px}
+  .clue{font-size:1.3rem}
+  .top .ttl{font-size:1rem}
+  .top{gap:6px;padding:8px 10px}
+}
+@media (max-width:520px){
+  .top .ttl,.top .net:not(.bad){display:none}
+  .top .stat{padding:.25em .6em;font-size:.9rem}
+}
+
+/* ---------- okna ---------- */
+.ov{position:fixed;inset:0;background:rgba(10,8,6,.7);display:flex;align-items:center;justify-content:center;z-index:50;padding:16px}
+.dlg{background:var(--paper);border-radius:22px;padding:22px;max-width:520px;width:100%;text-align:center;border:3px solid var(--ink);max-height:94dvh;overflow:auto;animation:pop .3s ease-out}
+.dlg.wide{max-width:720px;text-align:left}
+.dlg h2{font-size:1.5rem;margin-bottom:8px}
+.dlg .row{justify-content:center;margin-top:14px}
+.dlg .big-w{font-family:var(--hfont);font-size:2rem;margin:10px 0}
+.res{font-family:var(--hfont);font-size:clamp(2rem,7vw,3.2rem);margin:6px 0 10px}
+.res.win{color:var(--g)} .res.lose{color:var(--r)}
+@keyframes pop{0%{transform:scale(.9);opacity:0}100%{transform:none;opacity:1}}
+#toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:var(--ink);color:var(--on-ink);padding:.7em 1.2em;border-radius:99px;font-weight:800;z-index:60;opacity:0;pointer-events:none;transition:opacity .25s;max-width:92vw;text-align:center}
+#toast.show{opacity:1}
+@media (prefers-reduced-motion:reduce){.card.found.fresh,.card.boom,.card.miss.fresh,.dlg{animation:none}.card{transition:none}}
+</style>
+</head>
+<body data-theme="noir">
+<div id="app"></div>
+<div id="toast" role="status" aria-live="polite"></div>
+<script type="module">
+/* Tajniacy we dwoje: dwie osoby w osobnych przeglądarkach, wspólna plansza, każdy ma swój klucz.
+   Serwer (Durable Object TjDuo w repo mafia: worker/src/tajniacy/duo.js) pilnuje zasad i wysyła każdemu tylko jego klucz.
+   ?local=1: dev/duo-local.js (SharedWorker) uruchamia ten sam pokój lokalnie, bez Cloudflare. ?slot=N: osobne miejsce na kartę. */
+const API = 'https://pl3y-server.pl3y.workers.dev';
+const Q = new URLSearchParams(location.search);
+const LOCAL = Q.has('local');
+const SLOT = Q.get('slot') || '';
+const TURNS = [[9, '9 tur'], [11, '11 tur'], [0, 'Bez limitu']];
+
+const ls = {
+  get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+  set(k, v) { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} },
+};
+const seatKey = code => `tjduo_${LOCAL ? 'l' : 'p'}${SLOT}_${code}`;
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const calm = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+const $app = document.getElementById('app');
+
+// Motyw i własna lista haseł z głównych Tajniaków (ta sama przeglądarka), inaczej wbudowane kategorie.
+const TJ = (() => { try { return JSON.parse(ls.get('tajniacy_v1') || '{}').config || {}; } catch (e) { return {}; } })();
+document.body.dataset.theme = TJ.theme || 'noir';
+function parseWords(text) {
+  const cats = []; let cur = null;
+  for (const raw of String(text || '').split('\n')) {
+    const line = raw.trim(); if (!line) continue;
+    if (line.startsWith('#')) { cur = { name: line.replace(/^#+\s*/, '') || 'Ogólne', words: [] }; cats.push(cur); continue; }
+    if (!cur) { cur = { name: 'Ogólne', words: [] }; cats.push(cur); }
+    line.split(',').map(s => s.trim()).filter(Boolean).forEach(w => cur.words.push(w));
+  }
+  return cats.filter(c => c.words.length);
+}
+const CATS = TJ.text ? parseWords(TJ.text) : Object.entries(DEFAULTS).map(([name, v]) => ({ name, words: v.split(' ') }));
+function selCats() { try { const s = JSON.parse(ls.get('tjduo_cats') || 'null'); return Array.isArray(s) ? s : null; } catch (e) { return null; } }
+function pool() {
+  const sel = selCats(), seen = new Set(), out = [];
+  CATS.filter(c => !sel || sel.includes(c.name)).forEach(c => c.words.forEach(w => { const k = w.toLowerCase(); if (!seen.has(k)) { seen.add(k); out.push(w); } }));
+  return out;
+}
+function shuffle(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+
+// ---------- połączenie (WebSocket albo lokalny SharedWorker) ----------
+let port = null, cidSeq = 0, ridSeq = 0;
+const socks = new Map(), waits = new Map();
+function localPort() {
+  if (port) return port;
+  const w = new SharedWorker(new URL('dev/duo-local.js', location.href), { type: 'module', name: 'tjduo-dev' });
+  port = w.port;
+  port.onmessage = ({ data: m }) => {
+    if (m.rid && waits.has(m.rid)) { const f = waits.get(m.rid); waits.delete(m.rid); return f(m); }
+    const s = socks.get(m.cid); if (!s) return;
+    if (m.t === 'open') { s.readyState = 1; s.onopen && s.onopen(); }
+    else if (m.t === 'msg') s.onmessage && s.onmessage({ data: m.data });
+    else if (m.t === 'close') { s.readyState = 3; socks.delete(m.cid); s.onclose && s.onclose({ code: m.code }); }
+  };
+  port.start();
+  setInterval(() => { for (const [cid, s] of socks) if (s.readyState === 1) port.postMessage({ t: 'send', cid, data: '{"t":"ping"}' }); }, 4000);
+  return port;
+}
+class LocalSocket {
+  constructor(code) { this.cid = ++cidSeq; this.readyState = 0; socks.set(this.cid, this); localPort().postMessage({ t: 'connect', cid: this.cid, code }); }
+  send(d) { port.postMessage({ t: 'send', cid: this.cid, data: d }); }
+  close() { if (this.readyState > 1) return; this.readyState = 3; socks.delete(this.cid); port.postMessage({ t: 'close', cid: this.cid }); }
+}
+async function createRoom() {
+  if (LOCAL) {
+    const m = await new Promise(res => { const rid = ++ridSeq; waits.set(rid, res); localPort().postMessage({ t: 'api', rid, body: { method: 'POST', path: '/api/tj/duo/rooms' } }); });
+    if (m.status >= 300) throw new Error('HTTP ' + m.status);
+    return m.json;
+  }
+  const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 8000);
+  try {
+    const r = await fetch(API + '/api/tj/duo/rooms', { method: 'POST', signal: ctl.signal });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return await r.json();
+  } finally { clearTimeout(t); }
+}
+
+// Sam się wita (tokenem albo nickiem), wznawia po zerwaniu i ponawia niepotwierdzony ruch.
+class Conn {
+  constructor(code, name) {
+    this.code = code; this.name = name;
+    this.ws = null; this.status = ''; this.retry = 0; this.lastMsg = 0; this.stopped = false;
+    this.pending = null; this.seq = 0;
+    this.connect();
+    this.beat = setInterval(() => this.heartbeat(), 15000);
+    addEventListener('online', () => this.kick());
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) this.kick(); });
+  }
+  setStatus(s) { if (this.status !== s) { this.status = s; onStatus(s); } }
+  hello() { const h = { t: 'hello' }, tok = ls.get(seatKey(this.code)); if (tok) h.player = tok; if (this.name) h.join = this.name; return h; }
+  connect() {
+    if (this.stopped) return;
+    this.setStatus(this.retry ? 'reconnecting' : 'connecting');
+    let ws;
+    try { ws = LOCAL ? new LocalSocket(this.code) : new WebSocket(API.replace(/^http/, 'ws') + '/api/tj/duo/rooms/' + encodeURIComponent(this.code) + '/ws'); }
+    catch (e) { return this.later(); }
+    this.ws = ws;
+    ws.onopen = () => { this.retry = 0; this.lastMsg = Date.now(); this.raw(this.hello()); };
+    ws.onmessage = e => {
+      this.lastMsg = Date.now();
+      let m; try { m = JSON.parse(e.data); } catch (_) { return; }
+      if (m.t === 'pong') return;
+      if (m.t === 'welcome') { ls.set(seatKey(this.code), m.token); this.setStatus('online'); if (this.pending) this.raw(this.pending); return; }
+      if (m.t === 'state') { this.setStatus('online'); this.pending = null; return onState(m.view); }
+      if (m.t === 'error') {
+        if (m.code === 'noroom') { ls.set(seatKey(this.code), null); return this.stop('noroom'); }
+        if (m.code === 'full') return this.stop('full');
+        if (m.code === 'badplayer') { ls.set(seatKey(this.code), null); if (this.name) return this.raw(this.hello()); return this.stop('needname'); }
+        if (m.code === 'move') this.pending = null;
+        return toast(m.err || 'Błąd');
+      }
+    };
+    ws.onclose = e => { if (this.ws !== ws) return; this.ws = null; if (e && e.code === 4404) return this.stop('noroom'); this.later(); };
+    ws.onerror = () => {};
+  }
+  later() {
+    if (this.stopped) return;
+    this.setStatus('reconnecting');
+    const delay = Math.min(8000, 400 * 2 ** this.retry++) * (0.75 + Math.random() * 0.5);
+    clearTimeout(this.rt); this.rt = setTimeout(() => this.connect(), delay);
+  }
+  kick() { if (this.stopped) return; if (!this.ws || this.ws.readyState > 1) { clearTimeout(this.rt); this.retry = 0; this.connect(); } else this.heartbeat(); }
+  heartbeat() {
+    if (!this.ws || this.ws.readyState !== 1) return;
+    if (Date.now() - this.lastMsg > 40000) { const w = this.ws; try { w.close(); } catch (e) {} if (w.onclose) w.onclose({ code: 1006 }); return; }
+    this.raw({ t: 'ping' });
+  }
+  raw(obj) { if (this.ws && this.ws.readyState === 1) { this.ws.send(JSON.stringify(obj)); return true; } return false; }
+  send(obj) { return this.raw(obj); }
+  move(act) { const m = { t: 'move', id: Date.now().toString(36) + '-' + (++this.seq), act }; this.pending = m; if (!this.raw(m)) toast('Brak połączenia: ruch pójdzie po powrocie sieci.'); }
+  stop(reason) {
+    this.stopped = true; clearTimeout(this.rt); clearInterval(this.beat);
+    this.setStatus(reason || 'closed');
+    if (this.ws) { const w = this.ws; this.ws = null; try { w.close(); } catch (e) {} }
+  }
+}
+
+// ---------- stan widoku ----------
+let conn = null;
+const ui = { scr: 'menu', tab: 'room', code: '', view: null, status: '', showKey: true, keyOf: 'me', endShown: 0, clue: '', n: 1, err: '', busy: false };
+let prevG = null;     // poprzedni widok gry (do animacji świeżo odkrytych kart)
+let fresh = new Set();
+
+function codeFromHash() { const c = decodeURIComponent(location.hash.slice(1)).toUpperCase().replace(/[^A-Z0-9]/g, ''); return c.length === 5 ? c : ''; }
+const inviteUrl = code => location.origin + location.pathname + (LOCAL ? '?local=1' : '') + '#' + code;
+
+function join(code, name) {
+  if (conn) conn.stop('closed');
+  ui.code = code; ui.view = null; ui.err = ''; ui.scr = 'room'; ui.tab = 'room'; prevG = null;
+  if (location.hash.slice(1) !== code) history.replaceState(null, '', location.pathname + location.search + '#' + code);
+  conn = new Conn(code, name);
+  render();
+}
+function onStatus(s) {
+  ui.status = s;
+  if (s === 'noroom') { ui.scr = 'menu'; ui.err = 'Taki pokój nie istnieje albo wygasł.'; history.replaceState(null, '', location.pathname + location.search); }
+  if (s === 'full') { ui.scr = 'menu'; ui.err = 'Pokój jest pełny: grają już dwie osoby.'; }
+  if (s === 'needname') { ui.scr = 'nick'; }
+  render();
+}
+function onState(v) {
+  const g = v.game;
+  fresh = new Set();
+  if (g && prevG && prevG.words.join() === g.words.join()) {
+    g.found.forEach((f, i) => { if (f && !prevG.found[i]) fresh.add(i); });
+    [0, 1].forEach(s => g.miss[s].forEach((m, i) => { if (m && !prevG.miss[s][i]) fresh.add(i); }));
+  }
+  if (g && (!prevG || prevG.words.join() !== g.words.join())) { ui.keyOf = 'me'; ui.endShown = 0; ui.clue = ''; ui.n = 1; }
+  // Powiadomienie o mojej kolejce.
+  if (g && g.phase !== 'end') {
+    const mine = (g.phase === 'clue' && g.giver === v.seat) || (g.phase === 'guess' && g.giver !== v.seat);
+    const was = prevG && prevG.phase !== 'end' && ((prevG.phase === 'clue' && prevG.giver === v.seat) || (prevG.phase === 'guess' && prevG.giver !== v.seat));
+    if (mine && prevG && !was) toast(g.phase === 'clue' ? 'Twoja kolej: podaj hasło' : `Zgadujesz: ${g.clue.word} · ${g.clue.n}`);
+    document.title = (mine ? '● ' : '') + 'Tajniacy we dwoje';
+  } else document.title = 'Tajniacy we dwoje';
+  ui.view = v; prevG = g;
+  render();
+}
+
+// ---------- widoki ----------
+const LOBBY = `<button class="btn sm" data-act="lobby">← Lobby</button>`;
+function menuView() {
+  const nick = ls.get('tjduo_nick') || '';
+  return `<div class="wrap">
+    <div class="row" style="width:100%;max-width:640px;justify-content:space-between">${LOBBY}<a class="btn sm" href="./" style="text-decoration:none">Tajniacy na TV</a></div>
+    <div class="logo">TAJNIACY<small>GRA WE DWOJE</small></div><span class="stamp">ŚCIŚLE TAJNE</span>
+    <div class="panel">
+      ${ui.err ? `<p class="err">${esc(ui.err)}</p>` : ''}
+      <label class="lbl" for="nick">Twój nick</label>
+      <input type="text" id="nick" maxlength="16" value="${esc(nick)}" placeholder="np. Kurczak" autocomplete="nickname" style="width:100%">
+      <div class="sect"><button class="btn pri big" data-act="create" style="width:100%" ${ui.busy ? 'disabled' : ''}>${ui.busy ? 'Zakładam pokój…' : 'Załóż pokój'}</button></div>
+      <p class="or">albo</p>
+      <label class="lbl" for="jcode">Kod pokoju od znajomego</label>
+      <div class="field"><input type="text" id="jcode" maxlength="5" placeholder="ABCDE" autocapitalize="characters" style="text-transform:uppercase;letter-spacing:.2em"><button class="btn" data-act="joincode">Dołącz</button></div>
+    </div>
+    <div class="panel rules">${rulesHtml()}</div>
+  </div>`;
+}
+function nickView() {
+  return `<div class="wrap">
+    <div class="row" style="width:100%;max-width:640px">${LOBBY}</div>
+    <div class="logo">TAJNIACY<small>GRA WE DWOJE</small></div>
+    <div class="panel">
+      <p>Dołączasz do pokoju <b class="code" style="font-size:1.4rem">${esc(ui.code)}</b></p>
+      <label class="lbl" for="nick">Twój nick</label>
+      <div class="field"><input type="text" id="nick" maxlength="16" value="${esc(ls.get('tjduo_nick') || '')}" placeholder="np. Kurczak" autocomplete="nickname"><button class="btn pri" data-act="joinnick">Wchodzę</button></div>
+    </div>
+    <div class="panel rules">${rulesHtml()}</div>
+  </div>`;
+}
+function rulesHtml() {
+  return `<h2>Zasady</h2>
+  <p>Gracie <b>razem</b> przeciwko planszy. Na stole leży 25 słów. Każde z was ma <b>własny klucz</b>, którego druga osoba nie widzi.</p>
+  <h3>Klucz</h3>
+  <ul>
+    <li><span class="ex g">▲</span> <b>9 agentów</b>: słowa, na które masz naprowadzić partnera.</li>
+    <li><span class="ex a">☠</span> <b>3 zabójców</b>: jeśli partner kliknie któregoś po Twoim haśle, przegrywacie.</li>
+    <li><span class="ex n">&nbsp;</span> reszta to <b>postronni</b>.</li>
+    <li>Klucze częściowo się pokrywają: 3 agentów jest wspólnych, więc razem trzeba odnaleźć <b>15 słów</b>. Twój zabójca może być agentem partnera i odwrotnie.</li>
+  </ul>
+  <h3>Tura</h3>
+  <ul>
+    <li><b>Podający</b> wpisuje jedno hasło i liczbę słów, do których pasuje (np. „owoc · 2”).</li>
+    <li><b>Zgadujący</b> klika słowa i potwierdza odsłonięcie. Każde kliknięcie sprawdza się według <b>klucza podającego</b>:
+      <ul>
+        <li>agent: karta robi się zielona, można zgadywać dalej (najwyżej liczba z hasła + 1),</li>
+        <li>postronny: tura się kończy, a karta dostaje znacznik <span class="ex x">✕ imię</span>. Dla drugiej osoby to słowo nadal może być agentem,</li>
+        <li>zabójca: przegrywacie.</li>
+      </ul></li>
+    <li>Zgadujący może w każdej chwili kliknąć <b>Koniec tury</b>.</li>
+    <li>Potem role się zamieniają. Kto ma już odkrytych wszystkich swoich agentów, nie podaje haseł: podaje tylko druga osoba.</li>
+  </ul>
+  <h3>Koniec gry</h3>
+  <ul>
+    <li><b>Wygrana</b>: odkrytych wszystkich 15 agentów.</li>
+    <li><b>Przegrana</b>: zabójca, koniec limitu tur (9, 11 albo bez limitu, ustawia gospodarz pokoju) albo przycisk „Poddaj się”.</li>
+  </ul>
+  <h3>Dobre maniery</h3>
+  <ul>
+    <li>Hasło to jedno słowo. Nie może być słowem z planszy ani jego częścią.</li>
+    <li>Na Discordzie mówcie tylko hasło i liczbę. Żadnych „hmm, raczej nie to”, kiedy partner celuje w zabójcę 😉</li>
+  </ul>`;
+}
+function seatsHtml(v) {
+  return `<div class="seats">${v.seats.map((s, i) => s
+    ? `<div class="seat"><span class="dot ${s.on ? 'on' : ''}" title="${s.on ? 'Połączony' : 'Rozłączony'}"></span><span>${esc(s.name)}${i === v.seat ? ' (Ty)' : ''}${i === 0 ? ' ★' : ''}</span></div>`
+    : `<div class="seat empty"><span class="dot"></span><span>Czekamy na drugą osobę…</span></div>`).join('')}</div>`;
+}
+function roomView() {
+  const v = ui.view;
+  if (!v) return `<div class="wrap"><div class="row" style="width:100%;max-width:640px">${LOBBY}</div><div class="panel"><p>${ui.status === 'reconnecting' ? 'Łączę ponownie…' : 'Łączę z pokojem…'}</p></div></div>`;
+  const host = v.seat === 0, sel = selCats(), n = pool().length;
+  const tab = ui.tab === 'rules' ? `<div class="panel rules">${rulesHtml()}</div>` : `<div class="panel">
+      <div class="row" style="justify-content:space-between"><div><span class="lbl">Kod pokoju</span><span class="code">${esc(v.code)}</span></div>
+        <div class="row"><button class="btn sm" data-act="copy">📋 Kopiuj link</button></div></div>
+      <p class="muted" style="margin:6px 0 0">Wyślij ziomkowi link albo kod. Klucz zobaczy tylko on.</p>
+      ${seatsHtml(v)}
+      <div class="sect"><span class="lbl">Limit tur</span><div class="row">${TURNS.map(([t, nm]) => `<button class="btn sm ${v.turns === t ? 'on' : ''}" data-act="turns" data-v="${t}" ${host ? '' : 'disabled'}>${nm}</button>`).join('')}</div>
+        ${host ? '' : '<p class="muted" style="margin:6px 0 0">Ustawia gospodarz pokoju (★).</p>'}</div>
+      ${host ? `<div class="sect"><span class="lbl">Kategorie haseł (${n} słów)</span>
+        <div class="cats">${CATS.map(c => `<label><input type="checkbox" data-act="cat" data-n="${esc(c.name)}" ${!sel || sel.includes(c.name) ? 'checked' : ''}>${esc(c.name)}</label>`).join('')}</div>
+        ${TJ.text ? '<p class="muted" style="margin:4px 0 0">Lista haseł z Twoich Tajniaków na TV.</p>' : ''}</div>` : ''}
+      <div class="sect row">${host
+        ? `<button class="btn go big" data-act="start" ${v.seats[1] ? '' : 'disabled'}>▶ Start</button>${v.seats[1] ? '' : '<span class="muted">Start ruszy, gdy dołączy druga osoba.</span>'}`
+        : '<p class="muted">Czekamy, aż gospodarz kliknie Start. W międzyczasie obczaj zakładkę <b>Zasady</b>.</p>'}</div>
+    </div>`;
+  return `<div class="wrap">
+    <div class="row" style="width:100%;max-width:640px;justify-content:space-between">${LOBBY}${netHtml()}</div>
+    <div class="logo">TAJNIACY<small>GRA WE DWOJE</small></div>
+    <div class="tabs" role="tablist"><button class="${ui.tab === 'room' ? 'on' : ''}" data-act="tab" data-v="room" role="tab">Pokój</button><button class="${ui.tab === 'rules' ? 'on' : ''}" data-act="tab" data-v="rules" role="tab">Zasady</button></div>
+    ${tab}
+  </div>`;
+}
+function netHtml() {
+  const s = ui.status;
+  if (s === 'online') return '<span class="net">● połączono</span>';
+  return `<span class="net bad">${s === 'reconnecting' ? 'Łączę ponownie…' : 'Łączę…'}</span>`;
+}
+
+const GL = { g: '▲', a: '☠', n: '' };
+function agentSvg() {
+  return `<svg class="ill" viewBox="0 0 100 100" preserveAspectRatio="xMidYMax meet" aria-hidden="true"><path d="M6 100C8 82 24 72 50 72C76 72 92 82 94 100Z" fill="#0f2416"/><path d="M39 72L50 98L61 72Z" fill="#f3efe7"/><rect x="44" y="58" width="12" height="15" fill="#dcae88"/><ellipse cx="50" cy="48" rx="14" ry="16" fill="#f1cdaa"/><path d="M36.5 45H63.5V49.5C63.5 52.5 61.5 54 58.5 54H54.5C52 54 51 51.5 50 50C49 51.5 48 54 45.5 54H41.5C38.5 54 36.5 52.5 36.5 49.5Z" fill="#111"/><ellipse cx="50" cy="36" rx="28" ry="5.5" fill="#15110e"/><path d="M35 36C35 21 41 15 50 15C59 15 65 21 65 36Z" fill="#241d18"/><path d="M35.3 31H64.7V35.5H35.3Z" fill="#7fd99a"/></svg>`;
+}
+function cardHtml(v, g, i) {
+  const me = v.seat, end = g.phase === 'end';
+  const key = end && ui.keyOf === 'partner' ? g.partnerKey : g.key;
+  const k = key[i], found = g.found[i];
+  const giverMiss = g.miss[g.giver][i];
+  const can = !end && g.phase === 'guess' && g.giver !== me && !found && !giverMiss;
+  const boom = end && g.result && g.result.reason === 'assassin' && g.result.card === i;
+  let cls = 'card';
+  if (found) cls += ' found';
+  else if (boom) cls += ' boom';
+  else if (ui.showKey || end) cls += ' k-' + k;
+  if (can) cls += ' can';
+  if (!found && g.miss[0][i] && g.miss[1][i]) cls += ' dead';
+  if (!found && (g.miss[0][i] || g.miss[1][i])) cls += ' miss';
+  if (fresh.has(i) && !calm()) cls += ' fresh';
+  const marks = !found ? [0, 1].filter(s => g.miss[s][i]).map(s => `<i title="Postronny u: ${esc(g.names[s])}">✕ ${esc(g.names[s])}</i>`).join('') : '';
+  const gl = !found && (ui.showKey || end) && GL[k] ? `<span class="gl" aria-hidden="true">${GL[k]}</span>` : '';
+  const label = esc(g.words[i]) + (found ? ', odkryty agent' : '') + ((ui.showKey || end) && !found ? (k === 'g' ? ', agent na kluczu' : k === 'a' ? ', zabójca na kluczu' : '') : '');
+  return `<button class="${cls}" data-act="${can ? 'pick' : 'nop'}" data-i="${i}" aria-label="${label}" ${can ? '' : 'aria-disabled="true"'}>${found ? agentSvg() : ''}${gl}<span class="w">${esc(g.words[i])}</span>${marks ? `<span class="marks">${marks}</span>` : ''}</button>`;
+}
+function bannerHtml(v, g) {
+  const me = v.seat, giverName = esc(g.names[g.giver]), guesserName = esc(g.names[1 - g.giver]);
+  if (g.phase === 'end') {
+    const r = g.result;
+    const why = { all: 'Wszyscy agenci odnalezieni!', assassin: `Zabójca: „${esc(g.words[r.card])}”.`, time: 'Skończył się limit tur.', surrender: `${esc(g.names[r.by])} się poddaje.` }[r.reason];
+    return `<div class="banner me"><span class="who">${r.win ? '🏆 Wygrana!' : '💀 Przegrana'}</span><span class="sub">${why}</span><span style="margin-left:auto" class="row"><button class="btn sm" data-act="showend">Podsumowanie</button><button class="btn go sm" data-act="again">Nowa gra</button></span></div>`;
+  }
+  if (g.phase === 'clue') {
+    if (g.giver === me) {
+      return `<div class="banner me"><div style="width:100%"><span class="who">Twoja kolej: podaj hasło</span> <span class="sub">(według swojego klucza, ${v.game.myLeft} agentów do wskazania)</span></div>
+        <div class="cform"><input type="text" id="clue" maxlength="30" placeholder="Hasło (jedno słowo)" value="${esc(ui.clue)}" autocomplete="off">
+        <div class="nums" role="group" aria-label="Liczba słów">${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => `<button class="${ui.n === n ? 'on' : ''}" data-act="num" data-v="${n}">${n}</button>`).join('')}</div>
+        <button class="btn pri" data-act="clue">Podaj hasło</button></div></div>`;
+    }
+    return `<div class="banner"><span class="who">${giverName} wymyśla hasło…</span><span class="sub">Ty będziesz zgadywać.</span></div>`;
+  }
+  const left = g.max - g.guesses;
+  if (g.giver === me) return `<div class="banner"><span class="clue">${esc(g.clue.word)} · ${g.clue.n}</span><span class="sub">${guesserName} zgaduje (trafień: ${g.guesses}, zostało prób: ${left}). Ty nie klikasz.</span></div>`;
+  return `<div class="banner me"><span class="clue">${esc(g.clue.word)} · ${g.clue.n}</span><span class="sub">Twoja kolej: klikaj słowa ${giverName}. Trafienia: ${g.guesses}, możesz jeszcze ${left}.</span><button class="btn sm" data-act="endturn" style="margin-left:auto">Koniec tury</button></div>`;
+}
+function logHtml(g) {
+  if (!g.log.length) return '<p class="muted" style="margin:0">Jeszcze nikt nic nie podał.</p>';
+  return g.log.slice().reverse().map(e => `<div class="e"><span class="muted">${esc(g.names[e.giver])}:</span> <b>${esc(e.word)} · ${e.n}</b><br>${e.picks.map(p => `<span class="p ${p.k}">${esc(g.words[p.i])}</span>`).join('') || '<span class="muted">…</span>'}</div>`).join('');
+}
+function gameView() {
+  const v = ui.view, g = v.game, end = g.phase === 'end';
+  const turnTxt = g.turns ? `Tura ${Math.min(g.turnNo, g.turns)} / ${g.turns}` : `Tura ${g.turnNo}`;
+  const keyTools = end
+    ? `<div class="keytools"><span class="lbl" style="margin:0">Klucz:</span><button class="btn sm ${ui.keyOf === 'me' ? 'on' : ''}" data-act="keyof" data-v="me">Mój</button><button class="btn sm ${ui.keyOf === 'partner' ? 'on' : ''}" data-act="keyof" data-v="partner">${esc(g.names[1 - v.seat])}</button></div>`
+    : `<div class="keytools"><button class="btn sm ${ui.showKey ? 'on' : ''}" data-act="togglekey" aria-pressed="${ui.showKey}">${ui.showKey ? '🔑 Klucz widoczny' : '🙈 Klucz ukryty'}</button><span class="muted" style="font-size:.9rem">Twoich agentów do odkrycia: ${g.myLeft}</span></div>`;
+  return `<div class="top"><span class="ttl">Tajniacy we dwoje</span>
+      <span class="stat">${turnTxt}</span><span class="stat g">Agenci ${g.foundCount} / ${g.total}</span>${netHtml()}
+      <button class="btn sm" data-act="rules">Zasady</button>${end ? '' : '<button class="btn sm danger" data-act="surrender">Poddaj się</button>'}${LOBBY}</div>
+    <div class="game"><div class="main">${bannerHtml(v, g)}
+      <div class="board">${g.words.map((_, i) => cardHtml(v, g, i)).join('')}</div>${keyTools}</div>
+      <div class="side">
+        <div class="box"><h3>Gracze</h3>${seatsHtml(v).replace('class="seats"', 'class="seats" style="margin:0;grid-template-columns:1fr"')}</div>
+        <div class="box"><h3>Hasła</h3><div class="log">${logHtml(g)}</div></div>
+        <div class="box"><h3>Legenda</h3><div class="legend">
+          <span><span class="ex g" style="display:inline-flex;width:1.6em;justify-content:center;border-radius:6px;background:var(--g);color:#fff">▲</span> Twój agent</span>
+          <span><span style="display:inline-flex;width:1.6em;justify-content:center;border-radius:6px;background:#000;color:#fff">☠</span> Twój zabójca</span>
+          <span><span style="display:inline-flex;padding:0 4px;border-radius:6px;border:1px solid var(--cardb);font-size:.8em">✕ imię</span> Postronny u tej osoby</span>
+        </div></div>
+      </div></div>`;
+}
+function endDlg(v, g) {
+  const r = g.result;
+  const why = { all: 'Odnaleźliście wszystkich 15 agentów.', assassin: `${esc(g.names[r.by])} kliknął(-ęła) zabójcę: „${esc(g.words[r.card])}”.`, time: 'Skończył się limit tur.', surrender: `${esc(g.names[r.by])} się poddaje.` }[r.reason];
+  return `<div class="ov" data-act="closeend"><div class="dlg" role="dialog" aria-modal="true"><div class="res ${r.win ? 'win' : 'lose'}">${r.win ? 'WYGRANA' : 'PRZEGRANA'}</div>
+    <p>${why}</p><p class="muted">Agenci: ${g.foundCount} / ${g.total} · tur: ${g.turnNo}</p>
+    <div class="row"><button class="btn" data-act="closeend">Pokaż planszę i klucze</button><button class="btn go" data-act="again">Nowa gra</button></div></div></div>`;
+}
+
+let dlgEl = null;
+function render() {
+  // Zachowanie fokusu i zaznaczenia w polach tekstowych przy przebudowie.
+  const a = document.activeElement, fid = a && a.id && a.tagName === 'INPUT' ? a.id : null;
+  const sel = fid ? [a.selectionStart, a.selectionEnd] : null;
+  const vals = {}; document.querySelectorAll('#app input[type=text]').forEach(el => { if (el.id) vals[el.id] = el.value; });
+  let html;
+  if (ui.scr === 'menu') html = menuView();
+  else if (ui.scr === 'nick') html = nickView();
+  else if (ui.view && ui.view.game) html = gameView();
+  else html = roomView();
+  $app.innerHTML = html;
+  for (const [id, val] of Object.entries(vals)) { const el = document.getElementById(id); if (el && id !== 'clue') el.value = val; }
+  if (fid) { const el = document.getElementById(fid); if (el) { el.focus(); try { el.setSelectionRange(sel[0], sel[1]); } catch (e) {} } }
+  const g = ui.view && ui.view.game;
+  if (g && g.phase === 'end' && ui.endShown !== g.turnNo + ':' + g.foundCount) {
+    ui.endShown = g.turnNo + ':' + g.foundCount;
+    setTimeout(() => showDlg(endDlg(ui.view, g)), fresh.size && !calm() ? 900 : 50);
+  }
+  fitCards('.card .w');
+}
+function showDlg(html) {
+  closeDlg();
+  const w = document.createElement('div'); w.innerHTML = html; dlgEl = w.firstElementChild;
+  document.body.appendChild(dlgEl);
+  const b = dlgEl.querySelector('.btn.go,.btn.pri,.btn'); if (b) b.focus();
+}
+function closeDlg() { if (dlgEl) { dlgEl.remove(); dlgEl = null; } }
+function ask(title, body, okText, cls) {
+  return new Promise(res => {
+    closeDlg();
+    const o = document.createElement('div'); o.className = 'ov';
+    o.innerHTML = `<div class="dlg" role="dialog" aria-modal="true"><h2>${esc(title)}</h2>${body || ''}<div class="row"><button class="btn" data-v="0">Anuluj</button><button class="btn ${cls || 'pri'}" data-v="1">${esc(okText)}</button></div></div>`;
+    const done = v => { o.remove(); removeEventListener('keydown', key); res(v); };
+    const key = e => { if (e.key === 'Escape') done(false); if (e.key === 'Enter') { e.preventDefault(); done(true); } };
+    o.addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (b) done(b.dataset.v === '1'); else if (e.target === o) done(false); });
+    addEventListener('keydown', key);
+    document.body.appendChild(o);
+    o.querySelector('[data-v="1"]').focus();
+  });
+}
+let toastT;
+function toast(m) { const t = document.getElementById('toast'); t.textContent = m; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 2800); }
+
+// ---------- akcje ----------
+function nickOk() {
+  const el = document.getElementById('nick'), n = (el ? el.value : '').replace(/\s+/g, ' ').trim().slice(0, 16);
+  if (!n) { toast('Wpisz swój nick'); if (el) el.focus(); return null; }
+  ls.set('tjduo_nick', n); return n;
+}
+function startWords() {
+  const p = pool();
+  if (p.length < 25) { toast('Za mało haseł w wybranych kategoriach (min. 25)'); return null; }
+  return shuffle(p).slice(0, 25);
+}
+const acts = {
+  async lobby() { if (ui.view && ui.view.game && ui.view.game.phase !== 'end' && !(await ask('Wrócić do lobby PL3Y?', '<p>Gra zostanie w pokoju: wrócisz tym samym linkiem.</p>', 'Wróć do lobby'))) return; location.href = '/'; },
+  async create() {
+    const n = nickOk(); if (!n) return;
+    ui.busy = true; ui.err = ''; render();
+    try { const r = await createRoom(); ui.busy = false; join(r.code, n); }
+    catch (e) { ui.busy = false; ui.err = 'Nie udało się założyć pokoju. Sprawdź internet i spróbuj jeszcze raz.'; render(); }
+  },
+  joincode() {
+    const n = nickOk(); if (!n) return;
+    const c = (document.getElementById('jcode').value || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (c.length !== 5) return toast('Kod pokoju ma 5 znaków');
+    join(c, n);
+  },
+  joinnick() { const n = nickOk(); if (n) join(ui.code, n); },
+  tab(d) { ui.tab = d.v; render(); },
+  rules() { showDlg(`<div class="ov" data-act="closeend"><div class="dlg wide rules" role="dialog" aria-modal="true">${rulesHtml()}<div class="row"><button class="btn pri" data-act="closeend">Zamknij</button></div></div></div>`); },
+  async copy() {
+    const url = inviteUrl(ui.code);
+    try { await navigator.clipboard.writeText(url); toast('Link skopiowany: wyślij go ziomkowi'); }
+    catch (e) { prompt('Skopiuj link:', url); }
+  },
+  turns(d) { conn.send({ t: 'cfg', turns: Number(d.v) }); },
+  cat(d, el) {
+    let sel = selCats() || CATS.map(c => c.name);
+    sel = el.checked ? [...new Set([...sel, d.n])] : sel.filter(x => x !== d.n);
+    ls.set('tjduo_cats', sel.length === CATS.length ? null : JSON.stringify(sel));
+    render();
+  },
+  start() { const w = startWords(); if (w) conn.send({ t: 'start', words: w }); },
+  async again() { closeDlg(); const w = startWords(); if (w) conn.send({ t: 'start', words: w }); },
+  num(d) { ui.n = Number(d.v); render(); const el = document.getElementById('clue'); if (el) el.focus(); },
+  clue() {
+    const el = document.getElementById('clue'), w = (el ? el.value : '').trim();
+    if (!w) { toast('Wpisz hasło'); if (el) el.focus(); return; }
+    const g = ui.view.game;
+    if (g.words.some(x => x.toLowerCase() === w.toLowerCase())) return toast('Hasło nie może być słowem z planszy');
+    conn.move({ a: 'clue', word: w, n: ui.n }); ui.clue = '';
+  },
+  async pick(d) {
+    const g = ui.view.game, i = Number(d.i);
+    if (await ask('Odsłonić to hasło?', `<div class="big-w">${esc(g.words[i])}</div><p class="muted">Sprawdzi się według klucza: ${esc(g.names[g.giver])}.</p>`, 'Odsłoń', 'go')) {
+      const cur = ui.view.game;
+      if (cur.phase === 'guess' && cur.giver === g.giver && !cur.found[i]) conn.move({ a: 'guess', i });
+    }
+  },
+  nop() {
+    const g = ui.view && ui.view.game; if (!g || g.phase === 'end') return;
+    if (g.phase === 'clue' && g.giver !== ui.view.seat) toast('Poczekaj na hasło');
+    else if (g.phase === 'clue') toast('Najpierw podaj hasło');
+    else if (g.giver === ui.view.seat) toast('Teraz zgaduje ' + g.names[1 - g.giver]);
+  },
+  async endturn() { if (await ask('Zakończyć turę?', '<p>Role się zamienią.</p>', 'Koniec tury')) conn.move({ a: 'end' }); },
+  async surrender() { if (await ask('Poddać się?', '<p>Gra skończy się przegraną dla was obojga.</p>', 'Poddaję się', 'pri')) conn.move({ a: 'surrender' }); },
+  togglekey() { ui.showKey = !ui.showKey; render(); },
+  keyof(d) { ui.keyOf = d.v; render(); },
+  showend() { showDlg(endDlg(ui.view, ui.view.game)); },
+  closeend(d, el, e) { if (e.target === el || el.tagName === 'BUTTON') closeDlg(); },
+};
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-act]'); if (!el || el.dataset.act === 'cat') return;
+  const f = acts[el.dataset.act]; if (f) f(el.dataset, el, e);
+});
+document.addEventListener('change', e => { const el = e.target.closest('[data-act="cat"]'); if (el) acts.cat(el.dataset, el); });
+document.addEventListener('input', e => { if (e.target.id === 'clue') ui.clue = e.target.value; });
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter' || !e.target.id) return;
+  if (e.target.id === 'clue') acts.clue();
+  else if (e.target.id === 'jcode') acts.joincode();
+  else if (e.target.id === 'nick') ui.scr === 'nick' ? acts.joinnick() : acts.create();
+});
+addEventListener('hashchange', () => { const c = codeFromHash(); if (c && c !== ui.code) boot(); });
+addEventListener('resize', () => fitCards('.card .w'));
+
+function boot() {
+  const c = codeFromHash();
+  if (!c) { ui.scr = 'menu'; return render(); }
+  ui.code = c;
+  if (ls.get(seatKey(c))) return join(c, ls.get('tjduo_nick') || '');
+  ui.scr = 'nick'; render();
+  setTimeout(() => { const el = document.getElementById('nick'); if (el) el.focus(); }, 0);
+}
+boot();
+</script>
+</body>
+</html>

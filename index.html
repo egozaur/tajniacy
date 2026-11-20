@@ -18,6 +18,7 @@
 <link rel="stylesheet" href="common.css">
 <script src="common.js"></script>
 <script src="net.js"></script>
+<script src="words.js"></script>
 <script>
 //---------------------------------------------------------------------
 //
@@ -2760,16 +2761,6 @@ const Snd=(()=>{
 })();
 
 
-const DEFAULTS = {
-"Zwierzęta":"pies kot koń krowa świnia owca kura kaczka gęś lis wilk niedźwiedź jeleń zając wiewiórka jeż mysz szczur nietoperz sowa orzeł wróbel bocian łabędź papuga pingwin lew tygrys słoń żyrafa małpa krokodyl wąż żółw żaba rekin wieloryb delfin ośmiornica krab motyl pszczoła pająk mrówka biedronka komar ślimak kangur panda wielbłąd",
-"Jedzenie":"chleb masło ser jajko mleko szynka kiełbasa pierogi bigos rosół barszcz naleśnik pizza spaghetti kotlet ziemniak marchewka cebula pomidor ogórek jabłko gruszka banan truskawka cytryna pomarańcza arbuz czekolada lody tort ciasto herbata kawa sok woda piwo wino miód sól pieprz makaron ryż zupa sałatka kanapka frytki popcorn cukierek grzyb orzech",
-"Miejsca":"dom szkoła szpital kościół zamek most wieża rynek park las góra jezioro morze plaża wyspa pustynia wulkan jaskinia rzeka wieś miasto lotnisko dworzec port kino teatr muzeum biblioteka sklep bank hotel restauracja stadion basen cmentarz farma młyn latarnia tunel ulica piwnica strych ogród Warszawa Kraków Gdańsk Paryż Londyn Afryka",
-"Przedmioty":"stół krzesło łóżko szafa lampa zegar lustro okno drzwi klucz telefon komputer telewizor książka długopis ołówek nożyczki młotek piła śruba drabina wiadro parasol plecak walizka torba okulary zegarek pierścień korona miecz tarcza łuk kula lina siatka balon flaga mapa dzwonek gitara skrzypce fortepian bęben aparat latarka bateria kłódka szklanka widelec",
-"Natura i kosmos":"słońce księżyc gwiazda planeta kometa deszcz śnieg burza wiatr mgła tęcza chmura piorun lód ogień ziemia piasek kamień skała diament złoto srebro żelazo drzewo dąb sosna róża tulipan trawa liść korzeń nasiono kwiat fala wodospad bagno łąka pole dolina klif kosmos rakieta satelita galaktyka zorza cień światło echo tornado",
-"Ludzie i postacie":"lekarz pielęgniarka nauczyciel kucharz policjant strażak pilot kierowca rolnik górnik kowal malarz pisarz aktor piosenkarz tancerz sędzia adwokat żołnierz szpieg król królowa książę rycerz pirat kowboj czarodziej smok wampir duch wilkołak anioł diabeł olbrzym krasnoludek wróżka robot kosmita złodziej detektyw naukowiec astronauta listonosz fryzjer piekarz student dziecko babcia dziadek kapitan",
-"Sport i transport":"piłka bramka boisko medal puchar rower narty łyżwy pływanie bieg szachy karty kości puzzle film muzyka taniec cyrk klaun magik wakacje namiot ognisko wędka samochód autobus pociąg tramwaj samolot statek łódź helikopter motocykl metro taksówka ciężarówka hulajnoga żagiel kotwica kompas skarb wyścig maraton olimpiada turniej mecz trener kibic gwizdek",
-"Różne":"czas cisza sen strach miłość pamięć prawda tajemnica szczęście wolność pokój wojna władza pieniądz podatek urodziny wesele święta choinka prezent karnawał Wielkanoc zima lato wiosna jesień noc poranek tydzień rok wiek historia przyszłość magia bajka legenda zagadka sekret alarm mur granica paszport wiza wirus szczepionka lekarstwo gips termometr"
-};
 const DEFAULT_TEXT = Object.entries(DEFAULTS).map(([k,v]) => "# "+k+"\n"+v.split(" ").join("\n")).join("\n\n");
 
 /* ---------- narzędzia ---------- */
@@ -3278,7 +3269,7 @@ function splashView(){
   <p class="tag">Dwóch kapitanów zna prawdę. Reszta ma tylko podpowiedzi.</p>
   <div class="row" style="justify-content:center;margin-top:28px">${cont
     ?'<button class="btn pri big" data-act="enter">▶ Wróć do gry</button><button class="btn big" data-act="entersetup">Ustawienia</button>'
-    :`<button class="btn pri big" data-act="entersetup">▶ Zaczynamy</button>${game?'<button class="btn big" data-act="enter">Pokaż planszę</button>':''}`}${nSaves?`<button class="btn big" data-act="saves">Zapisane gry (${nSaves})</button>`:''}</div></div>`;
+    :`<button class="btn pri big" data-act="entersetup">▶ Zaczynamy</button>${game?'<button class="btn big" data-act="enter">Pokaż planszę</button>':''}`}${nSaves?`<button class="btn big" data-act="saves">Zapisane gry (${nSaves})</button>`:''}<button class="btn big" data-act="duo">👥 Gra we dwoje</button></div></div>`;
 }
 function setupView(){
   const cats=parseWords(ui.draftText!=null?ui.draftText:(config.text==null?DEFAULT_TEXT:config.text));
@@ -3385,6 +3376,7 @@ const acts={
   closeqr(){ ui.qr=false; render(); if(game&&!game.winner&&!game.revealed.some(Boolean)){ Snd.play('turn'); turnBanner(game.turn,'Zaczynają'); } },
   closewin(){ ui.hideWin=game.id; render(); },
   showwin(){ ui.hideWin=null; render(); },
+  duo(){ location.href="duo.html"; },
   enter(){ ui.splash=false; ui.screen='board'; Snd.unlock(); render(); },
   entersetup(){ ui.splash=false; ui.screen='setup'; Snd.unlock(); render(); },
   newmatch(){ config.score={r:0,b:0}; saveConfig(); newGame(); },
