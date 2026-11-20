@@ -25,7 +25,7 @@ const qa = (f, s) => [...doc(f).querySelectorAll(s)];
 const click = el => el.click();
 const type = (el, v) => { el.value = v; el.dispatchEvent(new Event('input', { bubbles: true })); };
 const words = f => qa(f, '.board .card .w').map(e => e.textContent);
-const banner = f => (q(f, '.banner') || {}).textContent || '';
+const banner = f => (q(f, '.cluebar') || {}).textContent || '';
 
 function load(f, url) { return new Promise(r => { f.onload = () => r(); f.src = url; }); }
 let fails = 0;
@@ -75,23 +75,31 @@ async function run() {
   click(q(B, '[data-act="tab"][data-v="room"]'));
   stop('lobby', { a: A, b: B });
   click(q(A, '[data-act="turns"][data-v="0"]'));
-  await until(() => q(B, '[data-act="turns"][data-v="0"].on'), 'limit tur u B');
+  await until(() => q(B, '[data-act="turns"][data-v="0"].pri'), 'limit tur u B');
 
   click(q(A, '[data-act="start"]'));
   await until(() => qa(A, '.board .card').length === 25 && qa(B, '.board .card').length === 25, 'plansze');
   check(words(A).join() === words(B).join(), 'ta sama plansza u obu');
-  check(qa(A, '.card.k-g').length === 9 && qa(B, '.card.k-g').length === 9, '9 agentów na każdym kluczu');
-  check(qa(A, '.card.k-a').length === 3 && qa(B, '.card.k-a').length === 3, '3 zabójców na każdym kluczu');
+  check(qa(A, '.card.hint.k-g').length === 9 && qa(B, '.card.hint.k-g').length === 9, '9 agentów na każdym kluczu');
+  check(qa(A, '.card.hint.k-a').length === 3 && qa(B, '.card.hint.k-a').length === 3, '3 zabójców na każdym kluczu');
   const kA = qa(A, '.board .card').map(c => c.className), kB = qa(B, '.board .card').map(c => c.className);
   check(kA.join() !== kB.join(), 'różne klucze');
 
   // 1) pudło: zgadujący klika postronnego podającego
   let G = await giverFrame(), S = G === A ? B : A;
   check(!q(S, '.card.can'), 'przed hasłem zgadujący nie klika');
-  type(q(G, '#clue'), 'test'); click(q(G, '[data-act="num"][data-v="2"]')); click(q(G, '[data-act="clue"]'));
+  // hasło: bez spacji i nie ze słów z planszy (ani ich części)
+  type(q(G, '#clue'), 'ab cd');
+  check(q(G, '#clue').value === 'abcd', 'spacja w haśle usunięta');
+  const bw = words(G)[0];
+  type(q(G, '#clue'), bw + 'owy'); click(q(G, '[data-act="clue"]'));
+  await sleep(250);
+  check(q(G, '#clue') && /jest na planszy/.test(doc(G).getElementById('toast').textContent), 'hasło ze słowem z planszy zablokowane („' + bw + 'owy”)');
+  type(q(G, '#clue'), 'qwz'); click(q(G, '[data-act="num"][data-v="2"]')); click(q(G, '[data-act="clue"]'));
   await until(() => q(S, '.card.can'), 'zgadujący może klikać');
   check(!q(G, '.card.can'), 'podający nie może klikać');
-  check(/test · 2/.test(banner(S)), 'hasło widoczne u zgadującego');
+  check(/qwz · 2/.test(banner(S)), 'hasło widoczne u zgadującego');
+  check(/prób: 2 z 2/.test(banner(S)), 'przy liczbie 2 są 2 próby (bez +1)');
   const gk = qa(G, '.board .card').map(c => (c.classList.contains('k-g') ? 'g' : c.classList.contains('k-a') ? 'a' : 'n'));
   const neutral = gk.indexOf('n');
   await confirmPick(S, neutral);
@@ -100,7 +108,7 @@ async function run() {
 
   // 2) koniec tury przyciskiem
   [G, S] = [S, G];
-  type(q(G, '#clue'), 'drugie'); click(q(G, '[data-act="clue"]'));
+  type(q(G, '#clue'), 'qwx'); click(q(G, '[data-act="clue"]'));
   await until(() => q(S, '[data-act="endturn"]'), 'przycisk Koniec tury');
   await sleep(300); stop('guess', { a: A, b: B, g: G, s: S });
   click(q(S, '[data-act="endturn"]')); click(await until(() => q(S, '.ov [data-v="1"]'), 'potwierdzenie końca tury'));
@@ -108,27 +116,29 @@ async function run() {
 
   // 3) gra do wygranej: podający wskazuje swoich agentów
   let guard = 0;
-  while (!q(A, '.res') && guard++ < 60) {
+  while (!q(A, '.endres') && guard++ < 60) {
     G = await giverFrame().catch(() => null);
     if (!G) break;
     S = G === A ? B : A;
-    const agents = qa(G, '.board .card').map((c, i) => (c.classList.contains('k-g') ? i : -1)).filter(i => i >= 0);
-    type(q(G, '#clue'), 'hasło' + guard); click(q(G, '[data-act="num"][data-v="9"]')); click(q(G, '[data-act="clue"]'));
+    const agents = qa(G, '.board .card').map((c, i) => (c.matches('.hint.k-g') ? i : -1)).filter(i => i >= 0);
+    type(q(G, '#clue'), 'qy' + 'abcdefghijklmnoprstuwz'[guard % 22] + guard); click(q(G, '[data-act="num"][data-v="9"]')); click(q(G, '[data-act="clue"]'));
     await until(() => q(S, '.card.can'), 'zgadywanie ' + guard);
     for (const i of agents) {
       if (!qa(S, '.board .card')[i].classList.contains('can')) break;
-      const before = qa(A, '.card.found').length;
+      const before = qa(A, '.card.rev').length;
       await confirmPick(S, i);
-      await until(() => qa(A, '.card.found').length === before + 1, 'odkryty agent');
-      if (q(A, '.res') || !q(S, '[data-act="endturn"]')) break;
+      await until(() => qa(A, '.card.rev').length === before + 1, 'odkryty agent');
+      if (q(A, '.endres') || !q(S, '[data-act="endturn"]')) break;
     }
     await sleep(100);
     if (q(S, '[data-act="endturn"]')) { click(q(S, '[data-act="endturn"]')); click(await until(() => q(S, '.ov [data-v="1"]'), 'koniec tury')); }
-    await until(() => q(A, '.res') || q(A, '#clue') || q(B, '#clue'), 'następna tura');
+    await until(() => q(A, '.endres') || q(A, '#clue') || q(B, '#clue'), 'następna tura');
   }
-  await until(() => q(A, '.res') && q(B, '.res'), 'okno końca gry', 4000);
-  check(/WYGRANA/.test(q(A, '.res').textContent) && /WYGRANA/.test(q(B, '.res').textContent), 'wygrana u obu');
-  check(qa(A, '.card.found').length === 15, '15 odkrytych agentów');
+  await until(() => q(A, '.endres') && q(B, '.endres'), 'okno końca gry', 4000);
+  check(/WYGRANA/.test(q(A, '.endres').textContent) && /WYGRANA/.test(q(B, '.endres').textContent), 'wygrana u obu');
+  check(qa(A, '.card.rev').length === 15, '15 odkrytych agentów');
+  check(qa(A, '.card.rev.my-a').length === 1 && /☠/.test(q(A, '.card.rev.my-a .back').textContent), 'odkryty agent partnera pamięta, że u mnie był zabójcą (☠)');
+  check(qa(A, '.card.rev.my-g').length === 9, 'moi agenci oznaczeni ▲ po odkryciu');
   await sleep(300); stop('end', { a: A, b: B });
   click(q(A, '.ov [data-act="closeend"].btn'));
   click(q(A, '[data-act="keyof"][data-v="partner"]'));
@@ -137,13 +147,28 @@ async function run() {
   // 4) nowa gra, poddanie się
   const old = words(A).join();
   click(q(B, '.ov [data-act="again"]'));
-  await until(() => words(A).join() !== old && !q(A, '.res') && qa(A, '.card.found').length === 0, 'nowa gra');
+  await until(() => words(A).join() !== old && !q(A, '.endres') && qa(A, '.card.rev').length === 0, 'nowa gra');
   check(words(A).join() === words(B).join(), 'nowa plansza u obu');
   click(q(A, '[data-act="surrender"]')); click(await until(() => q(A, '.ov [data-v="1"]'), 'potwierdzenie poddania'));
-  await until(() => q(B, '.res'), 'koniec po poddaniu');
-  check(/PRZEGRANA/.test(q(B, '.res').textContent), 'poddanie = przegrana');
+  await until(() => q(B, '.endres'), 'koniec po poddaniu');
+  check(/PRZEGRANA/.test(q(B, '.endres').textContent), 'poddanie = przegrana');
 
-  // 5) odświeżenie strony: powrót do tego samego miejsca
+  // 5) zabójca: scena strzału, karta z czaszką, przegrana
+  const old2 = words(A).join();
+  click(await until(() => q(A, '.ov [data-act="again"]'), 'Nowa gra po poddaniu'));
+  await until(() => words(A).join() !== old2 && !q(A, '.endres'), 'trzecia gra');
+  G = await giverFrame(); S = G === A ? B : A;
+  const killer = qa(G, '.board .card').findIndex(c => c.matches('.hint.k-a'));
+  type(q(G, '#clue'), 'qzzk'); click(q(G, '[data-act="clue"]'));
+  await until(() => q(S, '.card.can'), 'zgadywanie przed zabójcą');
+  await confirmPick(S, killer);
+  await until(() => q(S, '.kcard') || q(S, '.noir'), 'scena zabójcy', 3000);
+  check(true, 'scena zabójcy (zaciemnienie, strzał, karta z czaszką)');
+  stop('kill', { a: A, b: B, g: G, s: S });
+  await until(() => q(A, '.endres') && q(B, '.endres'), 'okno po zabójcy', 6000);
+  check(/PRZEGRANA/.test(q(A, '.endres').textContent) && qa(A, '.board .card')[killer].matches('.rev.k-a'), 'zabójca = przegrana, karta odkryta z czaszką');
+
+  // 6) odświeżenie strony: powrót do tego samego miejsca
   await new Promise(r => { B.onload = () => r(); B.contentWindow.location.reload(); });
   await until(() => qa(B, '.board .card').length === 25, 'powrót po odświeżeniu');
   check(!q(B, '#nick'), 'po odświeżeniu bez pytania o nick');
