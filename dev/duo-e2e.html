@@ -52,7 +52,18 @@ async function confirmPick(f, i) {
 async function giverFrame() { return until(() => (q(A, '#clue') ? A : q(B, '#clue') ? B : null), 'pole hasła u podającego'); }
 
 async function run() {
-  // ?server=prod: gra przez prawdziwy serwer PL3Y (Worker musi mieć ALLOW_LOCALHOST="true"), inaczej lokalny SharedWorker.
+  // ?server=prod&testkey=<PL3Y_TEST_SECRET>: gra przez prawdziwy serwer PL3Y. Worker na produkcji ma ALLOW_LOCALHOST="false",
+  // więc wymieniamy sekret testowy na token testowy (ważny 1 h) i zapisujemy go tam, gdzie czytają go gry (localStorage).
+  // Bez ?server=prod: lokalny SharedWorker, bez serwera i bez tokena.
+  if (P.get('server') === 'prod') {
+    const key = P.get('testkey');
+    if (!key) throw new Error('Tryb ?server=prod wymaga parametru ?testkey=<sekret PL3Y_TEST_SECRET>');
+    const lr = await fetch('https://pl3y-server.pl3y.workers.dev/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ test: key }) });
+    const lj = await lr.json().catch(() => ({}));
+    if (!lr.ok || !lj.token) throw new Error('Logowanie testowe nie przeszło (' + lr.status + '): ' + (lj.err || ''));
+    localStorage.setItem('pl3y_token', lj.token); localStorage.setItem('pl3y_token_exp', String(lj.exp)); localStorage.setItem('pl3y_token_kind', lj.kind);
+    log('✓ token testowy z serwera');
+  }
   const base = location.origin + '/tajniacy/duo.html' + (P.get('server') === 'prod' ? '?e2e=1' : '?local=1');
   await load(A, base + '&slot=1');
   await until(() => q(A, '#nick'), 'menu A');

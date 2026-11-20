@@ -12,7 +12,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
-<meta name="robots" content="noindex">
+<meta name="robots" content="noindex, nofollow">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;800;900&family=Special+Elite&family=Bungee&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="common.css">
@@ -122,6 +122,14 @@ body[data-theme=light]{--g:#2a8a4a;--gt:#d8f1df;--gtx:#14532b}
    Serwer (Durable Object TjDuo w repo mafia: worker/src/tajniacy/duo.js) pilnuje zasad i wysyła każdemu tylko jego klucz.
    ?local=1: dev/duo-local.js (SharedWorker) uruchamia ten sam pokój lokalnie, bez Cloudflare. ?slot=N: osobne miejsce na kartę. */
 const API = 'https://pl3y-server.pl3y.workers.dev';
+
+// Token sesji PL3Y: wydaje go serwer po podaniu hasła w bramce (/auth.js), tu tylko go odczytujemy.
+// Do zapytań HTTP idzie nagłówkiem Authorization, do WebSocketu parametrem ?tok= (przeglądarka nie ustawi nagłówka).
+const plToken = () => { try { const t = localStorage.getItem('pl3y_token'); return t && Number(localStorage.getItem('pl3y_token_exp')) > Date.now() ? t : ''; } catch (e) { return ''; } };
+const authHead = (h = {}) => { const t = plToken(); return t ? { ...h, Authorization: 'Bearer ' + t } : h; };
+const wsTok = () => { const t = plToken(); return t ? '?tok=' + encodeURIComponent(t) : ''; };
+// Serwer odrzucił sesję (401): pokaż bramkę hasła.
+const onAuthFail = r => { if (r.status === 401 && window.PL3Y && window.PL3Y.expired) window.PL3Y.expired(); };
 const Q = new URLSearchParams(location.search);
 const LOCAL = Q.has('local');
 const SLOT = Q.get('slot') || '';
@@ -188,7 +196,8 @@ async function createRoom() {
   }
   const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 8000);
   try {
-    const r = await fetch(API + '/api/tj/duo/rooms', { method: 'POST', signal: ctl.signal });
+    const r = await fetch(API + '/api/tj/duo/rooms', { method: 'POST', signal: ctl.signal, headers: authHead() });
+    onAuthFail(r);
     if (!r.ok) throw new Error('HTTP ' + r.status);
     return await r.json();
   } finally { clearTimeout(t); }
@@ -211,7 +220,7 @@ class Conn {
     if (this.stopped) return;
     this.setStatus(this.retry ? 'reconnecting' : 'connecting');
     let ws;
-    try { ws = LOCAL ? new LocalSocket(this.code) : new WebSocket(API.replace(/^http/, 'ws') + '/api/tj/duo/rooms/' + encodeURIComponent(this.code) + '/ws'); }
+    try { ws = LOCAL ? new LocalSocket(this.code) : new WebSocket(API.replace(/^http/, 'ws') + '/api/tj/duo/rooms/' + encodeURIComponent(this.code) + '/ws' + wsTok()); }
     catch (e) { return this.later(); }
     this.ws = ws;
     ws.onopen = () => { this.retry = 0; this.lastMsg = Date.now(); this.raw(this.hello()); };
