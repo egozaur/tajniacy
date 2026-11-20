@@ -52,7 +52,8 @@ async function confirmPick(f, i) {
 async function giverFrame() { return until(() => (q(A, '#clue') ? A : q(B, '#clue') ? B : null), 'pole hasła u podającego'); }
 
 async function run() {
-  const base = location.origin + '/tajniacy/duo.html?local=1';
+  // ?server=prod: gra przez prawdziwy serwer PL3Y (Worker musi mieć ALLOW_LOCALHOST="true"), inaczej lokalny SharedWorker.
+  const base = location.origin + '/tajniacy/duo.html' + (P.get('server') === 'prod' ? '?e2e=1' : '?local=1');
   await load(A, base + '&slot=1');
   await until(() => q(A, '#nick'), 'menu A');
   check(/Zasady/.test(doc(A).body.textContent), 'zasady w menu');
