@@ -8,6 +8,10 @@
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-title" content="PL3Y">
+<link rel="manifest" href="/site.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="robots" content="noindex">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;800;900&family=Special+Elite&family=Bungee&display=swap" rel="stylesheet">
@@ -2319,7 +2323,7 @@ var qrcode = function() {
 html,body{margin:0;height:100%}
 body{font-family:'Nunito',system-ui,sans-serif;color:var(--ink);background:radial-gradient(circle at 20% 0%,var(--bg) 0,var(--bg2) 100%);-webkit-tap-highlight-color:transparent}
 button{font-family:inherit;color:inherit;cursor:pointer}
-#app{min-height:100dvh;display:flex;flex-direction:column}
+#app{min-height:100dvh;display:flex;flex-direction:column;overflow:hidden;overflow:clip} /* paralaksa planszy nie wypycha strony (paski przewijania) */
 h1,h2,h3{margin:0}
 select{font-family:inherit;font-size:1rem;border:2px solid var(--cardb);border-radius:12px;padding:.5em .7em;background:var(--paper2);color:var(--ink)}
 .lbl{font-weight:800}

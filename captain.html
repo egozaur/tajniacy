@@ -8,6 +8,10 @@
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-title" content="PL3Y">
+<link rel="manifest" href="/site.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;900&family=Special+Elite&family=Bungee&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="common.css">
 <script src="common.js"></script>
@@ -77,7 +81,10 @@ let live=null;     // {hash, code, t, token, conn, status, view}
 
 function loadMarks(id){ try{ const a=JSON.parse(ls.get('tjm_'+id)||'[]'); marks=Array.from({length:25},(_,i)=>+a[i]||0); }catch(e){ marks=Array(25).fill(0); } }
 function saveMarks(){ ls.set('tjm_'+cur.id,JSON.stringify(marks)); }
-const shell=(msg,theme)=>{ document.body.dataset.theme=theme||'noir'; document.getElementById('root').innerHTML=`<div class="hdr x">Tajniacy</div><div class="err">${msg}</div>`; };
+// W aplikacji PL3Y (ekran główny, pełny ekran) nie ma przycisku Wstecz – dajemy własny powrót do lobby.
+const APP=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+const HOME=APP?'<button data-a="home" style="flex:0 0 auto">⌂ PL3Y</button>':'';
+const shell=(msg,theme)=>{ document.body.dataset.theme=theme||'noir'; document.getElementById('root').innerHTML=`<div class="hdr x">Tajniacy</div>${APP?`<div class="tools">${HOME}</div>`:''}<div class="err">${msg}</div>`; };
 
 /* ---------- tryb na żywo ---------- */
 function startLive(code,t,token){
@@ -135,7 +142,7 @@ function board(){
   }
   document.getElementById('root').innerHTML=`<div class="hdr ${t}"><div><small>Jesteś kapitanem drużyny</small><b>${esc(d.names[t])}</b></div><div class="lf"><small>Zostało</small><b>${mine-done}</b></div></div>
   ${bar}
-  <div class="tools"><button data-a="hide" class="${hidden?'on':''}">${hidden?'🔑 Pokaż klucz':'🙈 Ukryj klucz'}</button><button data-a="dark">${dark?'☀️ Motyw gry':'🌙 Tryb ciemny'}</button>${hidden?'':'<button data-a="clear">↺ Wyczyść znaczniki</button>'}</div>
+  <div class="tools">${HOME}<button data-a="hide" class="${hidden?'on':''}">${hidden?'🔑 Pokaż klucz':'🙈 Ukryj klucz'}</button><button data-a="dark">${dark?'☀️ Motyw gry':'🌙 Tryb ciemny'}</button>${hidden?'':'<button data-a="clear">↺ Wyczyść znaczniki</button>'}</div>
   <div class="board">${d.words.map((w,i)=>hidden
     // bez klucza: kolor tylko dla kart odkrytych (w trybie offline = oznaczonych ✓), bez symboli i znaczników
     ?`<div class="c h ${mk(i)===3?d.key[i]:''}" data-i="${i}">${esc(w)}</div>`
@@ -148,6 +155,7 @@ function board(){
 document.addEventListener('click',e=>{
   const a=e.target.closest('[data-a]');
   if(a){ const v=a.dataset.a;
+    if(v==='home'){ if(confirm('Wrócić do PL3Y? Do klucza wrócisz, skanując ponownie kod z ekranu.')) location.href='/'; return; }
     if(v==='hide') hidden=!hidden;
     else if(v==='dark'){ dark=!dark; ls.set('tj_cdark',dark?'1':'0'); }
     else if(v==='clear'){ if(marks.some(Boolean) && confirm('Wyczyścić wszystkie znaczniki?')){ marks=Array(25).fill(0); saveMarks(); } }

@@ -37,3 +37,7 @@ It is deployed via GitHub Pages at `https://pl3y.pl/tajniacy/`. The domain belon
 - **Hide key** („Ukryj klucz”) is a toggle: the board switches to the public TV view (unrevealed cards neutral, revealed ones in their colour; offline, cards marked ✓ count as revealed), without key glyphs or ★/⚠ marks, and taps are ignored. The state survives new boards.
 - In the offline format there is no sync with the host. Captains track cards themselves with local marks, stored in `localStorage` under `tjm_<hash of payload>`.
 - It loads the same `common.css` and `common.js` as `index.html`, so theme changes apply to both pages.
+- In the PL3Y home-screen app (`APP`: `display-mode: standalone`) there is no browser Back button, so the tools row gets „⌂ PL3Y” (back to `/` after a confirm). Both pages carry the shared app meta tags (see the lobby's CLAUDE.md); players scan captain codes with the lobby's built-in scanner to stay inside the app.
+
+### Layout note
+- `#app` has `overflow:clip` (fallback `hidden`): the mouse parallax (`--px/--py` on `.board`) and the hover lift of cards would otherwise push past the window edge and show scrollbars.
