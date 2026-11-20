@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="pl">
+<head><meta charset="utf-8"><title>Tajniacy – test E2E</title>
+<style>
+body{margin:0;font:13px/1.4 monospace;background:#111;color:#ddd}
+#frames{display:grid;grid-template-columns:2fr 1fr 1fr;gap:6px;height:70vh}
+iframe{width:100%;height:100%;border:1px solid #444;background:#fff}
+#log{padding:8px;white-space:pre-wrap}
+</style></head>
+<body>
+<!-- Test E2E z prawdziwym serwerem PL3Y (wymaga ALLOW_LOCALHOST="true" w Workerze).
+     Uruchom dev/serve.ps1 i otwórz http://localhost:8090/dev/e2e.html. Wynik: linia „E2E RESULT: PASS|FAIL” w konsoli. -->
+<div id="frames"><iframe id="host"></iframe><iframe id="capr"></iframe><iframe id="capb"></iframe></div>
+<div id="log"></div>
+<script>
+const $=id=>document.getElementById(id);
+const log=m=>{ $('log').textContent+=m+'\n'; console.log(m); };
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+async function until(fn,what,ms=15000){
+  const t0=Date.now();
+  while(Date.now()-t0<ms){ try{ const v=await fn(); if(v) return v; }catch(e){} await sleep(150); }
+  throw new Error('Timeout: '+what);
+}
+function load(id,src){ return new Promise(r=>{ const f=$(id); f.onload=()=>r(f.contentWindow); f.src=src; }); }
+const ok=(c,m)=>{ if(!c) throw new Error('Asercja: '+m); log('✓ '+m); };
+
+(async()=>{
+  try{
+    ['tajniacy_v1','tajniacy_room','tajniacy_saves','tajniacy_saves_pending','tajniacy_saves_up','tj_def_v2','tj_snd'].forEach(k=>localStorage.removeItem(k));
+    const hw=await load('host','../index.html');
+    await until(()=>hw.newGame&&hw.document.querySelector('#app').children.length,'start prowadzącego');
+    ok(hw.document.body.dataset.theme==='noir','domyślny motyw noir');
+    ok(JSON.parse(localStorage.getItem('tj_snd')).mv===.5,'muzyka domyślnie 50%');
+
+    const enter=hw.document.querySelector('[data-act="enter"],[data-act="entersetup"]'); if(enter) enter.click();
+    await hw.newGame();
+    const room=await until(()=>JSON.parse(localStorage.getItem('tajniacy_room')),'założenie pokoju');
+    ok(/^[A-Z0-9]{5}$/.test(room.code),'pokój '+room.code);
+    await until(()=>hw.document.querySelector('#netst.on'),'prowadzący online');
+    const qr=hw.document.querySelector('.qrs');
+    ok(qr&&qr.querySelectorAll('svg').length===2,'dwa kody QR');
+
+    const cr=await load('capr','../captain.html#'+room.code+'.r.'+room.cap.r);
+    const cb=await load('capb','../captain.html#'+room.code+'.b.'+room.cap.b);
+    await until(()=>cr.document.querySelectorAll('.c').length===25&&cb.document.querySelectorAll('.c').length===25,'plansze kapitanów');
+    ok(cr.document.querySelector('.hdr.r')&&cb.document.querySelector('.hdr.b'),'kapitanowie widzą swoje drużyny');
+    await until(()=>/2\/2/.test(hw.document.querySelector('#netst').textContent),'prowadzący widzi 2/2 kapitanów');
+    ok(true,'licznik kapitanów 2/2');
+    hw.document.querySelector('[data-act="closeqr"]').click();
+
+    // odkrycie neutralnej karty: kapitanowie dostają ✓ i zmianę tury
+    const cards=[...cr.document.querySelectorAll('.c')];
+    const i=cards.findIndex(c=>c.classList.contains('n'));
+    const turn0=cr.document.querySelector('.turn').classList.contains('r')?'r':'b';
+    hw.reveal(i,turn0);
+    await until(()=>cr.document.querySelectorAll('.c')[i].classList.contains('rv')&&cb.document.querySelectorAll('.c')[i].classList.contains('m3'),'✓ u kapitanów');
+    ok(true,'odkryta karta oznaczona u obu kapitanów');
+    await until(()=>cr.document.querySelector('.turn').classList.contains(turn0==='r'?'b':'r'),'zmiana tury u kapitana');
+    ok(true,'tura przeszła na drugą drużynę');
+    await sleep(1200);
+    const flipped=hw.document.querySelectorAll('.card.rev')[0];
+    ok(flipped&&hw.getComputedStyle(flipped.querySelector('.front')).visibility==='hidden','awers odkrytej karty ukryty (poprawka iOS)');
+
+    // nowa gra: bez QR, kapitanowie dostają nową planszę
+    const w0=cr.document.querySelector('.c').textContent;
+    await hw.newGame();
+    await sleep(300);
+    ok(!hw.document.querySelector('.qrs'),'nowa gra bez ponownego skanowania');
+    await until(()=>!cr.document.querySelector('.c.rv')&&cr.document.querySelector('.c').textContent!==w0,'nowa plansza u kapitana');
+    ok(true,'nowa plansza dotarła do kapitana');
+
+    // wspólne zapisy na serwerze
+    hw.saveGame('E2E test '+room.code);
+    const id=await until(()=>{ const s=hw.loadSaves().find(x=>x.name==='E2E test '+room.code); return s&&s.id; },'zapis lokalny');
+    await until(async()=>(await hw.TJNET.api('GET','/api/tj/saves')).some(s=>s.id===id),'zapis na serwerze');
+    ok(true,'zapis trafił na serwer');
+    hw.reveal(cards.length?[...cr.document.querySelectorAll('.c')].findIndex(c=>c.classList.contains('n')):0,'r');
+    await sleep(2000);
+    const srv=(await hw.TJNET.api('GET','/api/tj/saves')).find(s=>s.id===id);
+    ok(srv&&srv.game.revealed.some(Boolean),'ruch po zapisie zsynchronizował się na serwerze');
+    hw.delSave(id);
+    await sleep(1500);
+    ok(!(await hw.TJNET.api('GET','/api/tj/saves')).some(s=>s.id===id),'usunięcie zapisu z serwera');
+
+    log('E2E RESULT: PASS');
+  }catch(e){ log('✗ '+(e&&e.message||e)); log('E2E RESULT: FAIL'); }
+})();
+</script>
+</body></html>

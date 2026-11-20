@@ -13,6 +13,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;800;900&family=Special+Elite&family=Bungee&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="common.css">
 <script src="common.js"></script>
+<script src="net.js"></script>
 <script>
 //---------------------------------------------------------------------
 //
@@ -2390,6 +2391,13 @@ select{font-family:inherit;font-size:1rem;border:2px solid var(--cardb);border-r
 .card.flip{z-index:4}
 .card.flip .in{animation:flip3d .95s cubic-bezier(.35,.1,.25,1) both}
 .card.flip.slow .in{animation-duration:1.8s}
+/* Safari na iOS potrafi zignorować backface-visibility (zagnieżdżone warstwy), więc awers chowamy jawnie: znika w połowie obrotu */
+.card.rev .front{visibility:hidden}
+@keyframes faceout{0%,49%{visibility:visible}50%,100%{visibility:hidden}}
+@keyframes facein{0%,49%{visibility:hidden}50%,100%{visibility:visible}}
+.card.flip .front{animation:faceout .95s step-end both}
+.card.flip .back{animation:facein .95s step-end both}
+.card.flip.slow .front,.card.flip.slow .back{animation-duration:1.8s}
 @keyframes shake{0%,100%{transform:translate(0)}15%{transform:translate(-1.4vmin,.4vmin)}30%{transform:translate(1.4vmin,-.4vmin)}45%{transform:translate(-1vmin,.6vmin)}60%{transform:translate(1vmin,-.6vmin)}80%{transform:translate(-.5vmin,0)}}
 .board.shake{animation:shake .6s;animation-delay:.35s}
 
@@ -2419,6 +2427,8 @@ select{font-family:inherit;font-size:1rem;border:2px solid var(--cardb);border-r
 @keyframes pop{0%{transform:scale(.6);opacity:0}70%{transform:scale(1.06)}100%{transform:scale(1);opacity:1}}
 .dlg{animation:pop .35s ease-out}
 .foot{display:flex;gap:10px;justify-content:center;padding:0 2vmin 1.5vmin;flex-wrap:wrap}
+.netst{align-self:center;font-weight:800;font-size:.8rem;opacity:.6;white-space:nowrap}
+.netst.on{opacity:.85}
 
 /* baner tury: teczka „ŚCIŚLE TAJNE” z pieczątką drużyny */
 .tbanner{position:fixed;inset:0;z-index:80;pointer-events:none;display:flex;align-items:center;justify-content:center}
@@ -2542,12 +2552,17 @@ body[data-theme=classic] #fx i:nth-child(4){right:14vw;bottom:-12vmin;--r:-9deg;
 @keyframes paper{0%{transform:rotate(var(--r)) translate(0,0) skewY(0)}50%{transform:rotate(calc(var(--r) + 2deg)) translate(1vmin,-1.5vmin) skewY(.8deg)}100%{transform:rotate(calc(var(--r) - 1.5deg)) translate(-1vmin,1vmin) skewY(-.6deg)}}
 
 /* przyciski dźwięku */
-.snd{position:fixed;left:10px;bottom:10px;z-index:65;display:flex;gap:6px}
+.snd{position:fixed;left:10px;bottom:calc(10px + env(safe-area-inset-bottom));z-index:65;display:flex;gap:6px}
+/* telefon jako ekran prowadzącego: niższa plansza, w stopce miejsce na przyciski dźwięku */
+@media(max-width:700px){
+  .board{height:auto;flex:none;aspect-ratio:5/6.4;max-height:calc(100dvh - 220px)}
+  .foot{padding-bottom:calc(62px + env(safe-area-inset-bottom))}
+}
 .snd button{width:42px;height:42px;border-radius:50%;border:2px solid var(--cardb);background:var(--paper);font-size:1.15rem;opacity:.8;padding:0;line-height:1}
 .snd button.off{opacity:.4;filter:grayscale(1)}
 
 @media (prefers-reduced-motion:reduce){
-  .card.flip .in,.board.shake,.dlg,.team.active,.splash::before,.flap .fu,.flap .fd,.seq,.scar .spl,.kcard,.drop,.drop>*,#fx i,#fx i::before{animation:none}
+  .card.flip .in,.card.flip .front,.card.flip .back,.board.shake,.dlg,.team.active,.splash::before,.flap .fu,.flap .fd,.seq,.scar .spl,.kcard,.drop,.drop>*,#fx i,#fx i::before{animation:none}
   #fx i,#fx i::before{animation:none !important}
   .seq{opacity:1} .flap .fu,.flap .fd{display:none} .card,.board,#fx{transition:none}
   .folder{animation:fadeinout 2.3s both} .fstamp,.kcard .kst{animation:none;opacity:.92;transform:rotate(-7deg)}
@@ -2613,8 +2628,10 @@ const tn = t => (config.names&&config.names[t]) || TEAMS[t].name;
 /* ---------- dźwięk (Web Audio, bez plików) ---------- */
 const Snd=(()=>{
   let ctx=null, master=null, mus=null, fx=null, delay=null, nbuf=null, timer=null;
-  const st={m:true,s:true,mv:.35,sv:.85};
+  const st={m:true,s:true,mv:.5,sv:.85};
   try{ Object.assign(st, JSON.parse(localStorage.getItem('tj_snd')||'{}')); }catch(e){}
+  // jednorazowo: nowe domyślne ustawienia (muzyka 50%) także dla osób z zapisanymi ustawieniami
+  try{ if(!localStorage.getItem('tj_def_v2')) st.mv=.5; }catch(e){}
   let tension=false, hushed=false, step=0, nextT=0;
   const save=()=>{ try{localStorage.setItem('tj_snd',JSON.stringify(st));}catch(e){} };
   const mtof=n=>440*Math.pow(2,(n-69)/12);
@@ -2775,7 +2792,7 @@ function parseWords(text){
 
 /* ---------- stan ---------- */
 let store=null;
-let config={ text:null, cats:null, players:[], baseUrl:"", names:{}, theme:"classic", match:0, assassins:1, score:{r:0,b:0} };
+let config={ text:null, cats:null, players:[], baseUrl:"", names:{}, theme:"noir", match:0, assassins:1, score:{r:0,b:0} };
 let game=null;
 let ui={ screen:'board', draftText:null, splash:true, loaded:{config:false,game:false} };
 
@@ -2805,7 +2822,9 @@ async function newGame(){
   const na=assassinCount();
   const key=shuffle([].concat(Array(9).fill(start),Array(8).fill(other(start)),Array(8-na).fill('n'),Array(na).fill('a')));
   game={ id:Date.now(), words, key, revealed:Array(25).fill(false), start, turn:start, winner:null, turnCount:1, hits:{r:0,b:0}, miss:{r:0,b:0} };
-  ui.screen='board'; ui.qr=true; ui.winHold=false; ui.hideWin=null; Snd.hush(false); render();
+  ensureRoom();
+  ui.screen='board'; ui.qr=needQr(); ui.winHold=false; ui.hideWin=null; Snd.hush(false); render();
+  if(!ui.qr) toast('Nowa plansza poszła na telefony kapitanów');
   await store.set('game',game);
   return true;
 }
@@ -2846,12 +2865,56 @@ async function endTurn(){
 /* ---------- zapisane gry ----------
    Lista w localStorage „tajniacy_saves”: [{id, name, ts, game, cfg}], najnowsze pierwsze.
    Gra zapisana (game.saveId) aktualizuje swój zapis sama przy każdym ruchu – patrz syncSave(). */
-const SAVES_KEY='tajniacy_saves', SAVES_MAX=30;
+const SAVES_KEY='tajniacy_saves', SAVES_MAX=50, PEND_KEY='tajniacy_saves_pending';
 const SAVE_CFG=['players','names','theme','match','score','assassins'];
 function loadSaves(){ try{ const a=JSON.parse(localStorage.getItem(SAVES_KEY)||'[]'); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
 function writeSaves(a){
   try{ localStorage.setItem(SAVES_KEY,JSON.stringify(a.slice(0,SAVES_MAX))); return true; }
   catch(e){ toast("Nie udało się zapisać – brak miejsca w przeglądarce"); return false; }
+}
+/* Wspólne zapisy na serwerze PL3Y. localStorage to pamięć podręczna, a zmiany, których nie udało się wysłać,
+   czekają w kolejce {put:[id], del:[id]} i idą przy następnej okazji (np. przy otwarciu listy). */
+function loadPend(){ try{ const p=JSON.parse(localStorage.getItem(PEND_KEY)||'{}')||{}; return {put:p.put||[],del:p.del||[]}; }catch(e){ return {put:[],del:[]}; } }
+function writePend(p){ try{ localStorage.setItem(PEND_KEY,JSON.stringify(p)); }catch(e){} }
+function pend(op,id){ const p=loadPend(), o=op==='put'?'del':'put'; p[o]=p[o].filter(x=>x!==id); if(!p[op].includes(id)) p[op].push(id); writePend(p); }
+let flushing=null;
+function flushSaves(){
+  if(flushing) return flushing;
+  flushing=(async()=>{
+    const p=loadPend();
+    for(const id of [...p.put]){
+      const s=loadSaves().find(x=>x.id===id);
+      if(s) await TJNET.api('PUT','/api/tj/saves/'+id,s);
+      const q=loadPend(); q.put=q.put.filter(x=>x!==id); writePend(q);
+    }
+    for(const id of [...p.del]){
+      await TJNET.api('DELETE','/api/tj/saves/'+id);
+      const q=loadPend(); q.del=q.del.filter(x=>x!==id); writePend(q);
+    }
+  })().finally(()=>{ flushing=null; });
+  return flushing;
+}
+function putSave(id){ pend('put',id); flushSaves().catch(()=>{}); }
+function delSave(id){ writeSaves(loadSaves().filter(x=>x.id!==id)); pend('del',id); flushSaves().catch(()=>{}); }
+// Pobiera listę z serwera (po wysłaniu zaległych zmian). true = lista aktualna, false = brak połączenia.
+async function refreshSaves(){
+  try{
+    await flushSaves();
+    const list=await TJNET.api('GET','/api/tj/saves');
+    const p=loadPend(), local=loadSaves();
+    const keep=local.filter(s=>p.put.includes(s.id));
+    const merged=[...keep,...list.filter(s=>!p.put.includes(s.id)&&!p.del.includes(s.id))].sort((a,b)=>b.ts-a.ts);
+    writeSaves(merged);
+    return true;
+  }catch(e){ return false; }
+}
+// jednorazowo: zapisy sprzed serwera trafiają na wspólną listę
+function migrateSaves(){
+  try{
+    if(localStorage.getItem('tajniacy_saves_up')) return;
+    loadSaves().forEach(s=>pend('put',s.id));
+    localStorage.setItem('tajniacy_saves_up','1');
+  }catch(e){}
 }
 function saveCfg(){ const c={}; SAVE_CFG.forEach(k=>c[k]=JSON.parse(JSON.stringify(config[k]??null))); return c; }
 function saveGame(name){
@@ -2861,9 +2924,11 @@ function saveGame(name){
   game={...game,saveId:id,saveName:name};
   const entry={id,name,ts:Date.now(),game:JSON.parse(JSON.stringify(game)),cfg:saveCfg()};
   if(!writeSaves([entry,...a.filter(s=>s.id!==id)])) return;
+  putSave(id);
   store.set('game',game); render();
   toast(`Zapisano „${name}” – kolejne ruchy zapiszą się same`);
 }
+let syncT=null;
 function syncSave(){
   if(!game||!game.saveId) return;
   const a=loadSaves(), s=a.find(x=>x.id===game.saveId); if(!s) return;
@@ -2871,6 +2936,8 @@ function syncSave(){
   if(JSON.stringify(s.game)===g && JSON.stringify(s.cfg)===JSON.stringify(c)) return;
   s.game=JSON.parse(g); s.cfg=c; s.ts=Date.now();
   writeSaves([s,...a.filter(x=>x!==s)]);
+  pend('put',s.id);
+  clearTimeout(syncT); syncT=setTimeout(()=>flushSaves().catch(()=>{}),1000);
 }
 const unsavedGame = () => !!(game && !game.winner && !game.saveId);
 function saveStatus(s){
@@ -2882,9 +2949,13 @@ function saveStatus(s){
 }
 function savesDialog(){
   const o=document.createElement('div'); o.className='ov';
+  let net='load';     // load | ok | off
   const draw=()=>{
     const a=loadSaves();
-    o.innerHTML=`<div class="dlg wide"><h2>Zapisane gry</h2>${a.length
+    const info=net==='load'?'<p class="note">Pobieram listę z serwera…</p>'
+      :net==='off'?'<p class="note">Brak połączenia z serwerem – pokazuję zapisy z tego urządzenia. Zmiany wyślą się później.</p>'
+      :'<p class="note">Zapisy są wspólne dla wszystkich urządzeń PL3Y.</p>';
+    o.innerHTML=`<div class="dlg wide"><h2>Zapisane gry</h2>${info}${a.length
       ?`<div class="saves">${a.map(s=>`<div class="save ${game&&game.saveId===s.id?'cur':''}"><div class="si"><b>${esc(s.name)}</b><small>${esc(saveStatus(s))}</small></div>
           <button class="btn sm pri" data-sv="load" data-id="${s.id}">Wczytaj</button><button class="btn sm" data-sv="del" data-id="${s.id}" title="Usuń zapis" aria-label="Usuń zapis ${esc(s.name)}">✕</button></div>`).join('')}</div>`
       :'<p class="note">Nie masz jeszcze zapisanych gier. Zapiszesz grę przyciskiem „Zapisz grę” pod planszą.</p>'}
@@ -2896,18 +2967,19 @@ function savesDialog(){
     if(b.dataset.sv==='close'){ o.remove(); return; }
     const s=loadSaves().find(x=>x.id===+b.dataset.id); if(!s) return draw();
     if(b.dataset.sv==='del'){
-      if(await ask(`Usunąć zapis „${s.name}”?`,"Tak, usuń")){ writeSaves(loadSaves().filter(x=>x.id!==s.id)); draw(); }
+      if(await ask(`Usunąć zapis „${s.name}”?`,"Tak, usuń","Zapis zniknie ze wszystkich urządzeń.")){ delSave(s.id); draw(); }
     } else if(b.dataset.sv==='load'){
       if(unsavedGame() && !(await ask(`Wczytać „${s.name}”?`,"Tak, wczytaj","Obecna gra nie jest zapisana i zostanie zastąpiona."))) return;
       o.remove();
       config={...config,...s.cfg}; game={...s.game,saveId:s.id,saveName:s.name};
-      ui.splash=false; ui.screen='board'; ui.qr=!game.winner; ui.winHold=false; ui.hideWin=null; Snd.hush(false);
+      ui.splash=false; ui.screen='board'; ui.qr=!game.winner&&needQr(); ui.winHold=false; ui.hideWin=null; Snd.hush(false);
       render(); saveConfig(); store.set('game',game);
-      toast(`Wczytano „${s.name}” – kapitanowie muszą zeskanować nowe kody QR`);
+      toast(`Wczytano „${s.name}”`+(ui.qr?'':' – plansza poszła na telefony kapitanów'));
     }
   });
   o.addEventListener('keydown',e=>{ if(e.key==='Escape') o.remove(); });
   document.body.appendChild(o); draw();
+  refreshSaves().then(ok=>{ net=ok?'ok':'off'; if(o.isConnected) draw(); });
 }
 function askText(title, okText, value){
   return new Promise(res=>{
@@ -2932,21 +3004,83 @@ function qrSvg(url){
 }
 function payload(){
   const nm=x=>String(x||'').replace(/\|/g,'/').slice(0,16);
-  const s=game.key.join('')+'|'+game.words.join('|')+'|'+nm(tn('r'))+'|'+nm(tn('b'))+'|'+(config.theme||'classic');
+  const s=game.key.join('')+'|'+game.words.join('|')+'|'+nm(tn('r'))+'|'+nm(tn('b'))+'|'+(config.theme||'noir');
   let bin=''; new TextEncoder().encode(s).forEach(b=>bin+=String.fromCharCode(b));
   return btoa(bin).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
 }
-function capUrl(t){ const b=baseUrl().split('#')[0]; return b && game ? b+'#'+t+'.'+payload() : ''; }
+/* ---------- pokój na serwerze PL3Y ----------
+   Ekran prowadzącego jest źródłem prawdy: po każdej zmianie wysyła grę do pokoju, a serwer rozsyła ją
+   telefonom kapitanów. Pokój ({code, hostToken, cap:{r,b}}) zostaje na kolejne gry, więc QR skanuje się raz.
+   Bez serwera gra działa dalej, a kody QR przechodzą na stary format z kluczem w adresie (bez śledzenia kart). */
+const ROOM_KEY='tajniacy_room';
+const Net={ room:null, conn:null, status:'off', caps:{r:0,b:0}, creating:null, failedAt:0 };
+try{ Net.room=JSON.parse(localStorage.getItem(ROOM_KEY)||'null'); }catch(e){}
+function saveRoom(){ try{ Net.room?localStorage.setItem(ROOM_KEY,JSON.stringify(Net.room)):localStorage.removeItem(ROOM_KEY); }catch(e){} }
+function roomCfg(){ return {names:{r:tn('r'),b:tn('b')}, theme:config.theme||'noir'}; }
+function pushRoom(){ if(Net.conn&&Net.status==='online') Net.conn.send({t:'set', game:game||null, cfg:roomCfg()}); }
+function dropRoom(){ if(Net.conn) Net.conn.stop(); Net.conn=null; Net.room=null; Net.caps={r:0,b:0}; saveRoom(); }
+function connectRoom(){
+  if(Net.conn) Net.conn.stop();
+  const room=Net.room;
+  Net.conn=new TJNET.Conn({ code:room.code, hello:()=>({t:'hello',host:room.hostToken}),
+    onMessage:m=>{
+      if(m.t==='welcome'){ Net.status='online'; pushRoom(); }
+      else if(m.t==='state'&&m.caps){
+        Net.caps=m.caps;
+        if(m.caps.r&&m.caps.b&&!room.scanned){ room.scanned=true; saveRoom(); }
+      }
+      else if(m.t==='error'&&m.code==='badhost'){ dropRoom(); }
+      if(m.t==='state'&&ui.qr) render();
+      updNet();
+    },
+    onStatus:s=>{
+      Net.status=s;
+      if(s==='noroom'&&Net.room===room){   // pokój wygasł: nowy pokój i nowe kody
+        dropRoom();
+        ensureRoom().then(r=>{ if(r&&game&&!game.winner){ ui.qr=true; render(); } });
+      }
+      updNet();
+    } });
+}
+// Zwraca pokój (zakłada go, jeśli trzeba) albo null bez serwera. Po nieudanej próbie czeka 20 s.
+function ensureRoom(){
+  if(Net.room) return Promise.resolve(Net.room);
+  if(Net.creating) return Net.creating;
+  if(Date.now()-Net.failedAt<20000) return Promise.resolve(null);
+  Net.creating=TJNET.createRoom().then(r=>{
+    Net.room={code:r.code, hostToken:r.hostToken, cap:r.cap, scanned:false}; saveRoom(); connectRoom(); return Net.room;
+  }).catch(()=>{ Net.failedAt=Date.now(); return null; }).finally(()=>{ Net.creating=null; if(ui.qr) render(); updNet(); });
+  return Net.creating;
+}
+// Czy pokazywać kody QR przy nowej grze: tylko gdy kapitanowie nie mają jeszcze stałych kodów.
+const needQr = () => !(Net.room && Net.room.scanned);
+function netBadge(){
+  const on=Net.room&&Net.status==='online', c=Net.caps||{};
+  const txt=!Net.room?'○ offline':on?`● online · kapitanowie ${(c.r?1:0)+(c.b?1:0)}/2`:'○ łączę…';
+  return `<span id="netst" class="netst ${on?'on':''}" title="Połączenie z serwerem PL3Y (telefony kapitanów)">${txt}</span>`;
+}
+function updNet(){ const el=document.getElementById('netst'); if(el) el.outerHTML=netBadge(); }
+
+function capUrl(t){
+  const b=baseUrl().split('#')[0]; if(!b) return '';
+  if(Net.room) return b+'#'+Net.room.code+'.'+t+'.'+Net.room.cap[t];
+  return game ? b+'#'+t+'.'+payload() : '';
+}
 function qrBox(t){
-  const url=capUrl(t);
-  const cp=captainOf(t);
-  return `<div class="qrbox ${t}"><h3>Kapitan: ${esc(tn(t))}</h3><div>${cp?esc(cp.n):'<i>(kapitan niewybrany)</i>'}</div>
-    <div class="q">${url?qrSvg(url):'<small style="color:#333">Najpierw wpisz adres strony kapitana w Ustawieniach</small>'}</div></div>`;
+  const url=Net.creating?'':capUrl(t);
+  const cp=captainOf(t), on=Net.room&&Net.caps&&Net.caps[t];
+  return `<div class="qrbox ${t}"><h3>Kapitan: ${esc(tn(t))}</h3><div>${cp?esc(cp.n):'<i>(kapitan niewybrany)</i>'}${on?' · <b>połączony ✓</b>':''}</div>
+    <div class="q">${url?qrSvg(url):'<small style="color:#333">Łączę z serwerem…</small>'}</div></div>`;
 }
 function qrOverlay(){
+  if(!Net.room&&!Net.creating) ensureRoom();
+  const note=Net.room
+    ?'Każdy kapitan skanuje tylko swój kod. Kody działają przez kolejne gry: odkryte karty i nowe plansze pojawią się na telefonach same.'
+    :Net.creating?'Zakładam pokój na serwerze…'
+    :'Brak połączenia z serwerem. Kody działają offline: kapitanowie zaznaczają karty sami i skanują nowe kody przy każdej grze.';
   return `<div class="ov"><div class="dlg" style="max-width:900px"><h2>Kody dla kapitanów</h2>
   <div class="qrs">${qrBox('r')}${qrBox('b')}</div>
-  <p class="note">Każdy kapitan skanuje tylko swój kod. Zamknij okno, gdy obaj mają klucz.</p>
+  <p class="note">${note}</p>
   <div class="row"><button class="btn pri big" data-act="closeqr">Gotowe, zamknij</button></div></div></div>`;
 }
 
@@ -3054,7 +3188,7 @@ function hostBoard(){
   const hidden=game.winner && ui.hideWin===game.id;
   let html=`<div class="top">${tb('r')}<div class="mid"><span class="badge ${game.turn}">Ruch: ${esc(tn(game.turn))}</span><button class="btn sm" data-act="endturn">Koniec tury</button>${target?`<span class="mt">Mecz do ${target} · ${sc.r||0} : ${sc.b||0}</span>`:''}${na>1?`<span class="mt">☠ Zabójców: ${na}</span>`:''}</div>${tb('b')}</div>
   <div class="board ${shakeNext?'shake':''}">${game.words.map((_,i)=>cardHtml(i)).join('')}</div>
-  <div class="foot">${LOBBY_BTN}<button class="btn sm" data-act="newgame">Nowa gra</button><button class="btn sm" data-act="savegame">💾 ${game.saveId?'Zapisano':'Zapisz grę'}</button><button class="btn sm" data-act="saves">Zapisane gry</button><button class="btn sm" data-act="qr">Kody QR kapitanów</button><button class="btn sm" data-act="setup">Ustawienia</button>${hidden?'<button class="btn sm pri" data-act="showwin">Podsumowanie</button>':''}</div>`;
+  <div class="foot">${LOBBY_BTN}<button class="btn sm" data-act="newgame">Nowa gra</button><button class="btn sm" data-act="savegame">💾 ${game.saveId?'Zapisano':'Zapisz grę'}</button><button class="btn sm" data-act="saves">Zapisane gry</button><button class="btn sm" data-act="qr">Kody QR kapitanów</button><button class="btn sm" data-act="setup">Ustawienia</button>${hidden?'<button class="btn sm pri" data-act="showwin">Podsumowanie</button>':''}${netBadge()}</div>`;
   if(ui.qr) html+=qrOverlay();
   if(game.winner && !ui.winHold && !hidden) html+=winDialog();
   lastId=game.id; lastRev=game.revealed.slice(); lastLeft=now; shakeNext=false;
@@ -3155,7 +3289,7 @@ function setupView(){
     <div class="row"><label class="lbl">Drużyna 1 <input type="text" id="nr" maxlength="14" value="${esc(tn('r'))}" style="width:11em"></label>
       <label class="lbl">Drużyna 2 <input type="text" id="nb" maxlength="14" value="${esc(tn('b'))}" style="width:11em"></label></div>
     <div class="row">${PRESETS.map((p,i)=>`<button class="btn sm" data-act="preset" data-i="${i}">${p[0]} / ${p[1]}</button>`).join('')}</div>
-    <div class="row"><span class="lbl">Motyw:</span>${THEMES.map(([id,nm])=>`<button class="btn sm ${(config.theme||'classic')===id?'pri':''}" data-act="theme" data-v="${id}">${nm}</button>`).join('')}</div>
+    <div class="row"><span class="lbl">Motyw:</span>${THEMES.map(([id,nm])=>`<button class="btn sm ${(config.theme||'noir')===id?'pri':''}" data-act="theme" data-v="${id}">${nm}</button>`).join('')}</div>
     <div class="row"><span class="lbl">Tryb:</span><select id="matchsel">${[[0,'Pojedyncza gra'],[2,'Mecz do 2 wygranych'],[3,'Mecz do 3 wygranych'],[4,'Mecz do 4 wygranych']].map(([v,l])=>`<option value="${v}" ${(config.match||0)===v?'selected':''}>${l}</option>`).join('')}</select>
       <span class="lbl">Wynik: ${(config.score||{}).r||0} : ${(config.score||{}).b||0}</span><button class="btn sm" data-act="resetscore">Wyzeruj wynik</button></div>
     <div class="row"><span class="lbl">Zabójcy:</span><select id="asssel">${[1,2,3].map(v=>`<option value="${v}" ${assassinCount()===v?'selected':''}>${v===1?'1 (klasycznie)':v}</option>`).join('')}</select>
@@ -3173,7 +3307,7 @@ function setupView(){
   <div class="row" style="margin-top:18px"><button class="btn pri big" data-act="start">▶ Start nowej gry</button>${game?'<button class="btn" data-act="back">Wróć do planszy</button>':''}<button class="btn" data-act="saves">Zapisane gry</button>${LOBBY_BTN}</div></div>`;
 }
 function render(){
-  document.body.dataset.theme=config.theme||'classic';
+  document.body.dataset.theme=config.theme||'noir';
   if(!ui.loaded.config||!ui.loaded.game){ $app.innerHTML='<div class="wait">Ładowanie…</div>'; return; }
   if(ui.splash||!game||!game.winner||ui.screen!=='board') document.querySelectorAll('.scar').forEach(e=>e.remove());
   if(ui.splash){ $app.innerHTML=splashView(); return; }
@@ -3288,9 +3422,19 @@ function updateSndUi(){ const m=document.getElementById('bmusic'), f=document.ge
 /* ---------- start ---------- */
 // Hasło obsługuje wspólne /auth.js z lobby PL3Y (repo egozaur.github.io).
 (function init(){
+  // jednorazowo: nowe domyślne ustawienia (motyw noir, muzyka 50%) także dla osób z zapisanymi ustawieniami
+  try{
+    if(!localStorage.getItem('tj_def_v2')){
+      const d=JSON.parse(localStorage.getItem('tajniacy_v1')||'{}')||{};
+      if(d.config){ d.config.theme='noir'; localStorage.setItem('tajniacy_v1',JSON.stringify(d)); }
+      Snd.setVol('m',.5);
+      localStorage.setItem('tj_def_v2','1');
+    }
+  }catch(e){}
+  migrateSaves();
   store=makeLocalStore(); updateSndUi();
   store.sub('config',d=>{
-    if(d){ config={ text:null, cats:null, players:[], baseUrl:"", names:{}, theme:"classic", match:0, assassins:1, score:{r:0,b:0}, ...d }; config.names=config.names||{}; config.score=config.score||{r:0,b:0}; }
+    if(d){ config={ text:null, cats:null, players:[], baseUrl:"", names:{}, theme:"noir", match:0, assassins:1, score:{r:0,b:0}, ...d }; config.names=config.names||{}; config.score=config.score||{r:0,b:0}; }
     const first=!ui.loaded.config; ui.loaded.config=true;
     if(first || ui.screen!=='setup') render();
   });
@@ -3302,6 +3446,11 @@ function updateSndUi(){ const m=document.getElementById('bmusic'), f=document.ge
   // gra z listy zapisów aktualizuje swój zapis po każdym ruchu i zmianie wyniku
   store.sub('game',()=>syncSave());
   store.sub('config',()=>syncSave());
+  // każda zmiana gry i nazw/motywu idzie do pokoju na serwerze (telefony kapitanów)
+  store.sub('game',()=>pushRoom());
+  store.sub('config',()=>pushRoom());
+  if(Net.room) connectRoom();
+  flushSaves().catch(()=>{});
   setTimeout(()=>{ if(!ui.loaded.config||!ui.loaded.game){ ui.loaded.config=ui.loaded.game=true; render(); } },10000);
 })();
 </script>
