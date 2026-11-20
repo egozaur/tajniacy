@@ -31,6 +31,11 @@ It is deployed via GitHub Pages at `https://pl3y.pl/tajniacy/`. The domain belon
 - **Sound**: the `Snd` module synthesizes music and SFX with WebAudio (no audio files). Its settings live in `localStorage.tj_snd`.
 - **Themes**: `classic`, `noir`, `retro` and `light`, applied via `body[data-theme]` and CSS custom properties defined in `common.css` (shared with `captain.html`).
 
+### Server (sibling repo `../mafia`; only these files matter, ignore the rest of that repo)
+- `worker/src/tajniacy/room.js` (DO `TjRoom`): the host page is the source of truth and pushes `{t:'set', game, cfg}`; captains connect with per-team tokens and receive the board. One room serves many games, TTL 7 days. A `set` with `rotate:true` issues new captain tokens, closes old captain sockets with 4401 before broadcasting the new board, and answers the host `{t:'caps', cap, gameId}`.
+- `worker/src/tajniacy/saves.js` (DO `TjSaves`, singleton): shared saved-games list.
+- Routes: `POST /api/tj/rooms`, `GET /api/tj/rooms/:code/ws`, `GET /api/tj/saves`, `PUT|DELETE /api/tj/saves/:id`. Tests: `worker/test/tajniacy.suite.js`.
+
 ### `captain.html`: captain's key on a phone (opened from a QR code)
 - Live format `#<CODE>.<r|b>.<captain token>`: connects to the room via `net.js`, receives the board, marks revealed cards (✓) and the turn by itself (manual ★/⚠ marks are kept per `tjm_<code>_<game id>`). When the host starts a new board the server closes the socket with 4401 (`revoked`): the page drops the board and asks to scan the new code.
 - Offline format: the host encodes the game into the URL hash as `#<team>.<payload>`, where team is `r` or `b`. `payload()` in `index.html` produces `base64url(UTF-8("<25-char key>|<25 words>|<red name>|<blue name>|<theme>"))`, and `decode()` in `captain.html` parses it. **If you change the payload format, change both files together.**
