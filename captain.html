@@ -84,7 +84,7 @@ function loadMarks(id){ try{ const a=JSON.parse(ls.get('tjm_'+id)||'[]'); marks=
 function saveMarks(){ ls.set('tjm_'+cur.id,JSON.stringify(marks)); }
 // W aplikacji PL3Y (ekran główny, pełny ekran) nie ma przycisku Wstecz – dajemy własny powrót do lobby.
 const APP=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
-const HOME=APP?'<button data-a="home" style="flex:0 0 auto">⌂ PL3Y</button>':'';
+const HOME=APP?'<button class="tolobby" data-a="home" style="flex:0 0 auto">← Lobby</button>':'';
 const shell=(msg,theme)=>{ document.body.dataset.theme=theme||'noir'; document.getElementById('root').innerHTML=`<div class="hdr x">Tajniacy</div>${APP?`<div class="tools">${HOME}</div>`:''}<div class="err">${msg}</div>`; };
 
 /* ---------- tryb na żywo ---------- */
