@@ -99,7 +99,11 @@ function startLive(code,t,token){
       else if(m.t==='error'&&m.code==='badcap'){ me.err='Ten kod kapitana jest nieaktualny. Zeskanuj nowy kod QR z ekranu prowadzącego.'; me.conn.stop('badcap'); }
       draw();
     },
-    onStatus:s=>{ if(me!==live) return; me.status=s; if(s==='noroom') me.err='Ten pokój już wygasł. Zeskanuj nowy kod QR z ekranu prowadzącego.'; draw(); } });
+    onStatus:s=>{ if(me!==live) return; me.status=s;
+      if(s==='noroom') me.err='Ten pokój już wygasł. Zeskanuj nowy kod QR z ekranu prowadzącego.';
+      // nowa plansza = nowe kody: stary klucz znika z ekranu, a nieaktualny kod z adresu (odświeżenie go nie wskrzesi)
+      if(s==='revoked'){ me.view=null; me.err='Zaczęła się nowa gra. Zeskanuj nowy kod QR z ekranu prowadzącego.'; }
+      draw(); } });
 }
 
 function draw(){
@@ -119,7 +123,7 @@ function draw(){
 
 function drawLive(){
   const v=live.view;
-  if(live.err) return shell(esc(live.err), v&&v.theme);
+  if(live.err) return shell(esc(live.err), v?v.theme:document.body.dataset.theme);
   if(!v) return shell(live.status==='reconnecting'?'Brak połączenia z serwerem. Próbuję ponownie…':'Łączę z grą…');
   if(!v.game) return shell('Połączono jako kapitan drużyny <b>'+esc(v.names[live.t])+'</b>.<br>Czekam na planszę od prowadzącego…', v.theme);
   const g=v.game, id=live.code+'_'+g.id;

@@ -2827,8 +2827,7 @@ async function newGame(){
   const key=shuffle([].concat(Array(9).fill(start),Array(8).fill(other(start)),Array(8-na).fill('n'),Array(na).fill('a')));
   game={ id:Date.now(), words, key, revealed:Array(25).fill(false), start, turn:start, winner:null, turnCount:1, hits:{r:0,b:0}, miss:{r:0,b:0} };
   ensureRoom();
-  ui.screen='board'; ui.qr=needQr(); ui.winHold=false; ui.hideWin=null; Snd.hush(false); render();
-  if(!ui.qr) toast('Nowa plansza poszła na telefony kapitanów');
+  ui.screen='board'; ui.qr=true; ui.winHold=false; ui.hideWin=null; Snd.hush(false); render();
   await store.set('game',game);
   return true;
 }
@@ -2978,7 +2977,7 @@ function savesDialog(){
       config={...config,...s.cfg}; game={...s.game,saveId:s.id,saveName:s.name};
       ui.splash=false; ui.screen='board'; ui.qr=!game.winner&&needQr(); ui.winHold=false; ui.hideWin=null; Snd.hush(false);
       render(); saveConfig(); store.set('game',game);
-      toast(`Wczytano „${s.name}”`+(ui.qr?'':' – plansza poszła na telefony kapitanów'));
+      toast(`Wczytano „${s.name}”`);
     }
   });
   o.addEventListener('keydown',e=>{ if(e.key==='Escape') o.remove(); });
@@ -3014,14 +3013,17 @@ function payload(){
 }
 /* ---------- pokój na serwerze PL3Y ----------
    Ekran prowadzącego jest źródłem prawdy: po każdej zmianie wysyła grę do pokoju, a serwer rozsyła ją
-   telefonom kapitanów. Pokój ({code, hostToken, cap:{r,b}}) zostaje na kolejne gry, więc QR skanuje się raz.
+   telefonom kapitanów. Pokój ({code, hostToken, cap:{r,b}, capGame}) zostaje na kolejne gry, ale przy każdej
+   nowej planszy (game.id ≠ capGame) prowadzący wysyła `rotate`: serwer wydaje nowe kody kapitanów i rozłącza
+   stare telefony, żeby poprzedni kapitan nie zobaczył nowego klucza. capGame = gra, dla której wydano kody.
    Bez serwera gra działa dalej, a kody QR przechodzą na stary format z kluczem w adresie (bez śledzenia kart). */
 const ROOM_KEY='tajniacy_room';
 const Net={ room:null, conn:null, status:'off', caps:{r:0,b:0}, creating:null, failedAt:0 };
 try{ Net.room=JSON.parse(localStorage.getItem(ROOM_KEY)||'null'); }catch(e){}
 function saveRoom(){ try{ Net.room?localStorage.setItem(ROOM_KEY,JSON.stringify(Net.room)):localStorage.removeItem(ROOM_KEY); }catch(e){} }
 function roomCfg(){ return {names:{r:tn('r'),b:tn('b')}, theme:config.theme||'noir'}; }
-function pushRoom(){ if(Net.conn&&Net.status==='online') Net.conn.send({t:'set', game:game||null, cfg:roomCfg()}); }
+const freshCaps = () => !!(Net.room && (!game || Net.room.capGame===game.id));
+function pushRoom(){ if(Net.conn&&Net.status==='online') Net.conn.send({t:'set', game:game||null, cfg:roomCfg(), rotate:!freshCaps()}); }
 function dropRoom(){ if(Net.conn) Net.conn.stop(); Net.conn=null; Net.room=null; Net.caps={r:0,b:0}; saveRoom(); }
 function connectRoom(){
   if(Net.conn) Net.conn.stop();
@@ -3029,12 +3031,10 @@ function connectRoom(){
   Net.conn=new TJNET.Conn({ code:room.code, hello:()=>({t:'hello',host:room.hostToken}),
     onMessage:m=>{
       if(m.t==='welcome'){ Net.status='online'; pushRoom(); }
-      else if(m.t==='state'&&m.caps){
-        Net.caps=m.caps;
-        if(m.caps.r&&m.caps.b&&!room.scanned){ room.scanned=true; saveRoom(); }
-      }
+      else if(m.t==='state'&&m.caps){ Net.caps=m.caps; }
+      else if(m.t==='caps'&&m.cap&&Net.room===room){ room.cap=m.cap; room.capGame=m.gameId; saveRoom(); }
       else if(m.t==='error'&&m.code==='badhost'){ dropRoom(); }
-      if(m.t==='state'&&ui.qr) render();
+      if((m.t==='state'||m.t==='caps')&&ui.qr) render();
       updNet();
     },
     onStatus:s=>{
@@ -3052,12 +3052,12 @@ function ensureRoom(){
   if(Net.creating) return Net.creating;
   if(Date.now()-Net.failedAt<20000) return Promise.resolve(null);
   Net.creating=TJNET.createRoom().then(r=>{
-    Net.room={code:r.code, hostToken:r.hostToken, cap:r.cap, scanned:false}; saveRoom(); connectRoom(); return Net.room;
+    Net.room={code:r.code, hostToken:r.hostToken, cap:r.cap, capGame:game?game.id:null}; saveRoom(); connectRoom(); return Net.room;
   }).catch(()=>{ Net.failedAt=Date.now(); return null; }).finally(()=>{ Net.creating=null; if(ui.qr) render(); updNet(); });
   return Net.creating;
 }
-// Czy pokazywać kody QR przy nowej grze: tylko gdy kapitanowie nie mają jeszcze stałych kodów.
-const needQr = () => !(Net.room && Net.room.scanned);
+// Kody QR pokazujemy przy każdej nowej planszy: kody kapitanów zmieniają się z każdą grą.
+const needQr = () => !!game && !game.winner;
 function netBadge(){
   const on=Net.room&&Net.status==='online', c=Net.caps||{};
   const txt=!Net.room?'○ offline':on?`● online · kapitanowie ${(c.r?1:0)+(c.b?1:0)}/2`:'○ łączę…';
@@ -3067,7 +3067,7 @@ function updNet(){ const el=document.getElementById('netst'); if(el) el.outerHTM
 
 function capUrl(t){
   const b=baseUrl().split('#')[0]; if(!b) return '';
-  if(Net.room) return b+'#'+Net.room.code+'.'+t+'.'+Net.room.cap[t];
+  if(Net.room) return freshCaps() ? b+'#'+Net.room.code+'.'+t+'.'+Net.room.cap[t] : '';   // stare kody już nie działają – czekamy na nowe
   return game ? b+'#'+t+'.'+payload() : '';
 }
 function qrBox(t){
@@ -3079,7 +3079,7 @@ function qrBox(t){
 function qrOverlay(){
   if(!Net.room&&!Net.creating) ensureRoom();
   const note=Net.room
-    ?'Każdy kapitan skanuje tylko swój kod. Kody działają przez kolejne gry: odkryte karty i nowe plansze pojawią się na telefonach same.'
+    ?'Każdy kapitan skanuje tylko swój kod. Odkryte karty pojawią się na telefonach same. Przy każdej nowej planszy kody się zmieniają, a stare telefony tracą dostęp do klucza.'
     :Net.creating?'Zakładam pokój na serwerze…'
     :'Brak połączenia z serwerem. Kody działają offline: kapitanowie zaznaczają karty sami i skanują nowe kody przy każdej grze.';
   return `<div class="ov"><div class="dlg" style="max-width:900px"><h2>Kody dla kapitanów</h2>
