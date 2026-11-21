@@ -1,5 +1,5 @@
-/* Połączenie z serwerem PL3Y (Cloudflare Worker, repo mafia/worker): pokój Tajniaków przez WebSocket
-   i wspólna lista zapisów przez HTTP. Okrojona wersja Conn z mafia/js/net.js (zwykły skrypt, bez modułów). */
+/* Połączenie z serwerem PL3Y (Cloudflare Worker, repo pl3y-server): pokój Tajniaków przez WebSocket
+   i wspólna lista zapisów przez HTTP. Okrojona wersja Conn z klienta Mafii (mafia/js/net.js) (zwykły skrypt, bez modułów). */
 (function(){
   const API='https://pl3y-server.pl3y.workers.dev';
 

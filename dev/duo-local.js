@@ -1,7 +1,7 @@
 // Lokalny serwer deweloperski Tajniaków we dwoje (duo.html?local=1): ta sama klasa TjDuo co na Cloudflare, uruchomiona w SharedWorkerze
-// z atrapą ctx. Importuje kod serwera z sąsiedniego repo mafia, więc trzeba serwować folder nadrzędny (dev/serve-duo.ps1, port 8094).
+// z atrapą ctx. Importuje kod serwera z sąsiedniego repo pl3y-server, więc trzeba serwować folder nadrzędny (dev/serve-duo.ps1, port 8094).
 // Stan żyje, dopóki otwarta jest choć jedna karta.
-import { TjDuo } from '/mafia/worker/src/tajniacy/duo.js';
+import { TjDuo } from '/pl3y-server/src/games/tajniacy/duo.js';
 
 const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const rooms = new Map();          // code -> { room, run, sockets }
