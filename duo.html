@@ -112,7 +112,7 @@ body[data-theme=light]{--g:#2a8a4a;--gt:#d8f1df;--gtx:#14532b}
 @media (prefers-reduced-motion:reduce){.card.nudge .in,.splash .menu{animation:none;opacity:1}}
 </style>
 </head>
-<body data-theme="noir">
+<body data-theme="classic">
 <div id="fx" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
 <div id="app"></div>
 <div id="toast" role="status" aria-live="polite"></div>
@@ -145,7 +145,7 @@ const $app = document.getElementById('app');
 
 // Motyw i własna lista haseł z głównych Tajniaków (ta sama przeglądarka), inaczej wbudowane kategorie.
 const TJ = (() => { try { return JSON.parse(ls.get('tajniacy_v1') || '{}').config || {}; } catch (e) { return {}; } })();
-document.body.dataset.theme = TJ.theme || 'noir';
+document.body.dataset.theme = TJ.theme || 'classic';
 function parseWords(text) {
   const cats = []; let cur = null;
   for (const raw of String(text || '').split('\n')) {

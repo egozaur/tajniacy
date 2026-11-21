@@ -2369,7 +2369,7 @@ function parseWords(text){
 
 /* ---------- stan ---------- */
 let store=null;
-let config={ text:null, cats:null, players:[], baseUrl:"", names:{}, theme:"noir", match:0, assassins:1, score:{r:0,b:0} };
+let config={ text:null, cats:null, players:[], baseUrl:"", names:{}, theme:"classic", match:0, assassins:1, score:{r:0,b:0} };
 let game=null;
 let ui={ screen:'board', draftText:null, splash:true, loaded:{config:false,game:false} };
 
@@ -2580,7 +2580,7 @@ function qrSvg(url){
 }
 function payload(){
   const nm=x=>String(x||'').replace(/\|/g,'/').slice(0,16);
-  const s=game.key.join('')+'|'+game.words.join('|')+'|'+nm(tn('r'))+'|'+nm(tn('b'))+'|'+(config.theme||'noir');
+  const s=game.key.join('')+'|'+game.words.join('|')+'|'+nm(tn('r'))+'|'+nm(tn('b'))+'|'+(config.theme||'classic');
   let bin=''; new TextEncoder().encode(s).forEach(b=>bin+=String.fromCharCode(b));
   return btoa(bin).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
 }
@@ -2594,7 +2594,7 @@ const ROOM_KEY='tajniacy_room';
 const Net={ room:null, conn:null, status:'off', caps:{r:0,b:0}, creating:null, failedAt:0 };
 try{ Net.room=JSON.parse(localStorage.getItem(ROOM_KEY)||'null'); }catch(e){}
 function saveRoom(){ try{ Net.room?localStorage.setItem(ROOM_KEY,JSON.stringify(Net.room)):localStorage.removeItem(ROOM_KEY); }catch(e){} }
-function roomCfg(){ return {names:{r:tn('r'),b:tn('b')}, theme:config.theme||'noir'}; }
+function roomCfg(){ return {names:{r:tn('r'),b:tn('b')}, theme:config.theme||'classic'}; }
 const freshCaps = () => !!(Net.room && (!game || Net.room.capGame===game.id));
 function pushRoom(){ if(Net.conn&&Net.status==='online') Net.conn.send({t:'set', game:game||null, cfg:roomCfg(), rotate:!freshCaps()}); }
 function dropRoom(){ if(Net.conn) Net.conn.stop(); Net.conn=null; Net.room=null; Net.caps={r:0,b:0}; saveRoom(); }
@@ -2806,7 +2806,7 @@ function setupView(){
   <div class="row" style="margin-top:18px"><button class="btn pri big" data-act="start">▶ Start nowej gry</button>${game?'<button class="btn" data-act="back">Wróć do planszy</button>':''}<button class="btn" data-act="saves">Zapisane gry</button>${LOBBY_BTN}</div></div>`;
 }
 function render(){
-  document.body.dataset.theme=config.theme||'noir';
+  document.body.dataset.theme=config.theme||'classic';
   if(!ui.loaded.config||!ui.loaded.game){ $app.innerHTML='<div class="wait">Ładowanie…</div>'; return; }
   if(ui.splash||!game||!game.winner||ui.screen!=='board') document.querySelectorAll('.scar').forEach(e=>e.remove());
   if(ui.splash){ $app.innerHTML=splashView(); return; }
@@ -2930,11 +2930,17 @@ function updateSndUi(){ const m=document.getElementById('bmusic'), f=document.ge
       Snd.setVol('m',.5);
       localStorage.setItem('tj_def_v2','1');
     }
+    // v3: domyślny motyw wraca do Klasycznego (jasny papier, czerwoni i niebiescy) także tam, gdzie v2 wymusiło Noir
+    if(!localStorage.getItem('tj_def_v3')){
+      const d=JSON.parse(localStorage.getItem('tajniacy_v1')||'{}')||{};
+      if(d.config && (!d.config.theme || d.config.theme==='noir')){ d.config.theme='classic'; localStorage.setItem('tajniacy_v1',JSON.stringify(d)); }
+      localStorage.setItem('tj_def_v3','1');
+    }
   }catch(e){}
   migrateSaves();
   store=makeLocalStore(); updateSndUi();
   store.sub('config',d=>{
-    if(d){ config={ text:null, cats:null, players:[], baseUrl:"", names:{}, theme:"noir", match:0, assassins:1, score:{r:0,b:0}, ...d }; config.names=config.names||{}; config.score=config.score||{r:0,b:0}; }
+    if(d){ config={ text:null, cats:null, players:[], baseUrl:"", names:{}, theme:"classic", match:0, assassins:1, score:{r:0,b:0}, ...d }; config.names=config.names||{}; config.score=config.score||{r:0,b:0}; }
     const first=!ui.loaded.config; ui.loaded.config=true;
     if(first || ui.screen!=='setup') render();
   });

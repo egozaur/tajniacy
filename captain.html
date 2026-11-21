@@ -56,7 +56,7 @@ body{margin:0;min-height:100dvh;font-family:'Nunito',system-ui,sans-serif;color:
 .tools button.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 </style>
 </head>
-<body data-theme="noir">
+<body data-theme="classic">
 <div id="root"></div>
 <script>
 /* Dwa formaty kodu QR:
@@ -70,7 +70,7 @@ function decode(p){
   const bin=atob(p), bytes=Uint8Array.from(bin,c=>c.charCodeAt(0));
   const s=new TextDecoder().decode(bytes).split('|');
   const key=s.shift().split(''), words=s.slice(0,25), ex=s.slice(25);
-  return {key, words, names:{r:ex[0]||DEF.r, b:ex[1]||DEF.b}, theme:THEMES.includes(ex[2])?ex[2]:'noir'};
+  return {key, words, names:{r:ex[0]||DEF.r, b:ex[1]||DEF.b}, theme:THEMES.includes(ex[2])?ex[2]:'classic'};
 }
 const ls={get(k){try{return localStorage.getItem(k);}catch(e){return null;}},set(k,v){try{localStorage.setItem(k,v);}catch(e){}}};
 const hash=s=>{let h=5381;for(let i=0;i<s.length;i++)h=((h<<5)+h+s.charCodeAt(i))|0;return (h>>>0).toString(36);};
@@ -85,7 +85,7 @@ function saveMarks(){ ls.set('tjm_'+cur.id,JSON.stringify(marks)); }
 // W aplikacji PL3Y (ekran główny, pełny ekran) nie ma przycisku Wstecz – dajemy własny powrót do lobby.
 const APP=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 const HOME=APP?'<button class="tolobby" data-a="home" style="flex:0 0 auto">← Lobby</button>':'';
-const shell=(msg,theme)=>{ document.body.dataset.theme=theme||'noir'; document.getElementById('root').innerHTML=`<div class="hdr x">Tajniacy</div>${APP?`<div class="tools">${HOME}</div>`:''}<div class="err">${msg}</div>`; };
+const shell=(msg,theme)=>{ document.body.dataset.theme=theme||'classic'; document.getElementById('root').innerHTML=`<div class="hdr x">Tajniacy</div>${APP?`<div class="tools">${HOME}</div>`:''}<div class="err">${msg}</div>`; };
 
 /* ---------- tryb na żywo ---------- */
 function startLive(code,t,token){
